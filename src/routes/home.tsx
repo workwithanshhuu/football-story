@@ -147,9 +147,9 @@ function HomeScreen() {
         <section className="panel flex items-stretch gap-3 rounded-2xl p-3">
           <div className="flex flex-col justify-center pr-3">
             <p className="text-[10px] font-600 tracking-[0.14em] text-muted-foreground uppercase">
-              Rating
+              Skill
             </p>
-            <p className="tnum font-display text-3xl leading-none font-700 text-primary">7.8</p>
+            <p className="tnum font-display text-3xl leading-none font-700 text-primary">{user?.skillSelfRating ?? "—"}</p>
           </div>
           <div className="w-px bg-border" />
           <div className="grid flex-1 grid-cols-3 gap-1">
@@ -202,7 +202,7 @@ function HomeScreen() {
 
             <div className="mt-3 flex items-center gap-2">
               <Link
-                to="/logger"
+                to="/referee"
                 className="volt-fill flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-[12px] font-700 tracking-wide uppercase active:scale-[0.98]"
               >
                 <ClipboardList className="size-4" strokeWidth={2.4} />
@@ -281,7 +281,7 @@ function HomeScreen() {
               <Chip icon={<Goal className="size-3" strokeWidth={2.6} />}>2 goals</Chip>
               <Chip icon={<Handshake className="size-3" strokeWidth={2.6} />}>1 assist</Chip>
               <Chip icon={<ShieldCheck className="size-3" strokeWidth={2.6} />} tone="pitch">
-                Referee verified
+                Live event card
               </Chip>
             </div>
           </article>

@@ -98,9 +98,9 @@ function MatchesScreen() {
             </div>
             <div className="ml-auto text-right">
               <p className="text-[10px] font-600 tracking-[0.14em] text-muted-foreground uppercase">
-                Rating
+                Skill rating
               </p>
-              <p className="mt-1 font-display text-2xl leading-none font-700 text-primary">7.8</p>
+              <p className="mt-1 font-display text-2xl leading-none font-700 text-primary">—</p>
             </div>
           </div>
         </section>
@@ -140,7 +140,7 @@ function MatchesScreen() {
             </div>
             <div className="mt-3 flex items-center justify-between text-[10px] font-600 text-muted-foreground uppercase">
               <span>Last Sunday · 7v7</span>
-              <span className="text-primary">MVP · 7.8 rating</span>
+              <span className="text-primary">MVP · scorecard ready</span>
             </div>
           </article>
         </section>
@@ -185,9 +185,9 @@ function MatchRow({ match }: { match: Match }) {
         <span className="tnum text-[10px] text-muted-foreground">
           {match.playersJoined}/{match.playersNeeded} players in
         </span>
-        <button className="panel-2 ml-auto flex items-center gap-0.5 rounded-lg px-2 py-1 text-[10px] font-700 tracking-wide uppercase active:scale-95">
+        <Link to="/player" className="panel-2 ml-auto flex items-center gap-0.5 rounded-lg px-2 py-1 text-[10px] font-700 tracking-wide uppercase active:scale-95">
           View <ChevronRight className="size-3" strokeWidth={2.6} />
-        </button>
+        </Link>
       </div>
     </article>
   );

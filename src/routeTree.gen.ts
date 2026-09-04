@@ -16,7 +16,9 @@ import { Route as HostRouteImport } from './routes/host'
 import { Route as LoggerRouteImport } from './routes/logger'
 import { Route as MatchLoggerRouteImport } from './routes/match-logger'
 import { Route as MatchesRouteImport } from './routes/matches'
+import { Route as PlayerRouteImport } from './routes/player'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as RefereeRouteImport } from './routes/referee'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -53,9 +55,19 @@ const MatchesRoute = MatchesRouteImport.update({
   path: '/matches',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlayerRoute = PlayerRouteImport.update({
+  id: '/player',
+  path: '/player',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RefereeRoute = RefereeRouteImport.update({
+  id: '/referee',
+  path: '/referee',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -67,7 +79,9 @@ export interface FileRoutesByFullPath {
   '/logger': typeof LoggerRoute
   '/match-logger': typeof MatchLoggerRoute
   '/matches': typeof MatchesRoute
+  '/player': typeof PlayerRoute
   '/profile': typeof ProfileRoute
+  '/referee': typeof RefereeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -77,7 +91,9 @@ export interface FileRoutesByTo {
   '/logger': typeof LoggerRoute
   '/match-logger': typeof MatchLoggerRoute
   '/matches': typeof MatchesRoute
+  '/player': typeof PlayerRoute
   '/profile': typeof ProfileRoute
+  '/referee': typeof RefereeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -88,7 +104,9 @@ export interface FileRoutesById {
   '/logger': typeof LoggerRoute
   '/match-logger': typeof MatchLoggerRoute
   '/matches': typeof MatchesRoute
+  '/player': typeof PlayerRoute
   '/profile': typeof ProfileRoute
+  '/referee': typeof RefereeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -100,7 +118,9 @@ export interface FileRouteTypes {
     | '/logger'
     | '/match-logger'
     | '/matches'
+    | '/player'
     | '/profile'
+    | '/referee'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -110,7 +130,9 @@ export interface FileRouteTypes {
     | '/logger'
     | '/match-logger'
     | '/matches'
+    | '/player'
     | '/profile'
+    | '/referee'
   id:
     | '__root__'
     | '/'
@@ -120,7 +142,9 @@ export interface FileRouteTypes {
     | '/logger'
     | '/match-logger'
     | '/matches'
+    | '/player'
     | '/profile'
+    | '/referee'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -131,7 +155,9 @@ export interface RootRouteChildren {
   LoggerRoute: typeof LoggerRoute
   MatchLoggerRoute: typeof MatchLoggerRoute
   MatchesRoute: typeof MatchesRoute
+  PlayerRoute: typeof PlayerRoute
   ProfileRoute: typeof ProfileRoute
+  RefereeRoute: typeof RefereeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -185,11 +211,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MatchesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/player': {
+      id: '/player'
+      path: '/player'
+      fullPath: '/player'
+      preLoaderRoute: typeof PlayerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile': {
       id: '/profile'
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/referee': {
+      id: '/referee'
+      path: '/referee'
+      fullPath: '/referee'
+      preLoaderRoute: typeof RefereeRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -203,7 +243,9 @@ const rootRouteChildren: RootRouteChildren = {
   LoggerRoute: LoggerRoute,
   MatchLoggerRoute: MatchLoggerRoute,
   MatchesRoute: MatchesRoute,
+  PlayerRoute: PlayerRoute,
   ProfileRoute: ProfileRoute,
+  RefereeRoute: RefereeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

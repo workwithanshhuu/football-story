@@ -38,6 +38,7 @@ body{margin:0;background:#DAD5C6;font-family:Inter,system-ui,sans-serif;color:va
 .tally{display:flex;align-items:center;gap:9px}
 .stepcol{display:flex;flex-direction:column;gap:3px}
 .st{width:22px;height:19px;border:1px solid rgba(255,255,255,.18);background:transparent;color:#9CA096;border-radius:6px;cursor:pointer;font-size:10px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;font-family:inherit}
+.st svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .st:active{background:var(--volt);border-color:var(--volt);color:var(--volt-ink)}
 .num{font-family:'Barlow Condensed',sans-serif;font-size:52px;font-weight:800;line-height:.86;letter-spacing:-.01em;min-width:38px;text-align:center;font-variant-numeric:tabular-nums}
 .dash{font-size:26px;font-weight:400;color:#54574F;line-height:.86;padding:0 1px}
@@ -155,15 +156,15 @@ body{margin:0;background:#DAD5C6;font-family:Inter,system-ui,sans-serif;color:va
       <div class="centre">
         <div class="tally">
           <div class="stepcol">
-            <button class="st" data-s="h" data-d="1" aria-label="Home up">&#9650;</button>
-            <button class="st" data-s="h" data-d="-1" aria-label="Home down">&#9660;</button>
+            <button class="st" data-s="h" data-d="1" aria-label="Home up"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg></button>
+            <button class="st" data-s="h" data-d="-1" aria-label="Home down"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg></button>
           </div>
           <span class="num" id="hs">1</span>
           <span class="dash">&ndash;</span>
           <span class="num" id="as">0</span>
           <div class="stepcol">
-            <button class="st" data-s="a" data-d="1" aria-label="Away up">&#9650;</button>
-            <button class="st" data-s="a" data-d="-1" aria-label="Away down">&#9660;</button>
+            <button class="st" data-s="a" data-d="1" aria-label="Away up"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg></button>
+            <button class="st" data-s="a" data-d="-1" aria-label="Away down"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg></button>
           </div>
         </div>
         <div class="clockrow"><span class="clock" id="clock">63'</span></div>
@@ -244,7 +245,7 @@ var good=["Goal","Shot on target","Assist","Chance created","Aerial won","Duel w
 var bad=["Aerial lost","Duel lost","Dribbled past","Lost the ball","Foul","Goal conceded","Shot off target","Off the post"];
 var goalTypes=["Strong foot","Weak foot","Header","Volley"];
 var contested=["Beat his man","Duel won","Duel lost","Dribbled past","Aerial won","Aerial lost","Foul","Fouled","Tackle won"];
-var avColors=["#1C6B44","#8B3FE0","#D9782F","#2E6FD9","#B7326F","#0F9D8C","#4B5FE0"];
+var avColors=["#315D44","#4B6337","#68413D","#80663A"];
 function initials(name){var p=name.replace("#","").trim().split(/\s+/);return ((p[0]||"")[0]+((p[1]||"")[0]||"")).toUpperCase();}
 function avColor(name){var h=0;for(var i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))>>>0;return avColors[h%avColors.length];}
 
@@ -280,10 +281,10 @@ function squadUI(){
     var b=document.createElement("button");
     var col=avColor((t.named?p.n:t.name+p.no));
     if(t.named){
-      b.className="pl"+(sel===i?" on":"");
+      b.className="pl team-home"+(sel===i?" on":"");
       b.innerHTML='<span class="av" style="background:'+col+'">'+initials(p.n)+'</span><span class="nm">'+p.n+'</span><span class="ps">'+p.p+' &middot; #'+p.no+'</span>';
     }else{
-      b.className="ng"+(sel===i?" on":"");
+      b.className="ng team-away"+(sel===i?" on":"");
       b.innerHTML='<span class="n">'+p.no+'</span><span class="p">'+p.p+'</span>';
     }
     b.onclick=function(){sel=(sel===i?null:i);vibrate(10);paint();if(sel!==null)openGlass();};
@@ -310,7 +311,7 @@ function openGlass(){
   $("gpanel").innerHTML='<div class="grab"></div><div class="gtop">'+
     '<span class="gav" style="background:'+avColor(t.named?p.n:t.name+p.no)+'">'+initials(p.n)+'</span>'+
     '<span class="gmeta"><span class="gname">'+label+'</span><span class="gsub">'+p.p+' &middot; '+t.name+'</span></span>'+
-    '<button class="gclose" id="gclose">&#10005;</button></div>'+
+    '<button class="gclose" id="gclose" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>'+
     '<div class="gbody"><div class="acts" id="gacts"></div></div>';
   var g=$("gacts");
   acts[p.p].forEach(function(a){
@@ -393,7 +394,7 @@ function logUI(){
   L.innerHTML=evs.slice(-6).reverse().map(function(e){
     var base=e.a.split(" vs ")[0];
     var c=e.g?(e.s==="a"?"var(--rust)":"var(--turf)"):good.indexOf(base)>-1?"var(--ok)":bad.indexOf(base)>-1?"var(--bad)":"var(--mute-2)";
-    var ic=e.g?"\u26BD":base==="Foul"?"\uD83D\uDFE8":bad.indexOf(base)>-1?"\u2013":"\u2713";
+    var ic=e.g?'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="m8 9 4 3 4-3M8 15l4-3 4 3"/></svg>':base==="Foul"?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8M9 4v4l-2 3a5 5 0 0 0 10 0l-2-3V4M8 19h8"/></svg>':bad.indexOf(base)>-1?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 12 4 4 8-8"/></svg>';
     return '<div class="ev"><span class="ic">'+ic+'</span><span class="t">'+e.m+"'</span><span class=\"who\">"+e.p+'</span><span class="what" style="color:'+c+'">'+e.a+'</span></div>';
   }).join("");
 }

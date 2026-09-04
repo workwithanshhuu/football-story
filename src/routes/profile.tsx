@@ -11,6 +11,7 @@ import {
   Home,
   MapPin,
   Plus,
+  Radio,
   ShieldCheck,
   Trophy,
   UserRound,
@@ -95,7 +96,7 @@ function ProfileScreen() {
             </div>
           </div>
           <div className="relative mt-5 grid grid-cols-3 gap-2 border-t border-border pt-4">
-            <ProfileStat value="7.8" label="Rating" />
+            <ProfileStat value={user?.skillSelfRating ? String(user.skillSelfRating) : "—"} label="Skill" />
             <ProfileStat value="12" label="Goals" />
             <ProfileStat value="04" label="MVPs" />
           </div>
@@ -135,6 +136,18 @@ function ProfileScreen() {
             icon={<Trophy className="size-4" />}
             title="Scorecards"
             detail="Your match history and ratings"
+          />
+          <ProfileAction
+            href="/referee"
+            icon={<ShieldCheck className="size-4" />}
+            title="Referee console"
+            detail="Log the live match and manage events"
+          />
+          <ProfileAction
+            href="/player"
+            icon={<Radio className="size-4" />}
+            title="Player live view"
+            detail="Follow the score without editing the log"
           />
           <ProfileAction
             icon={<ShieldCheck className="size-4" />}
@@ -220,13 +233,15 @@ function ProfileAction({
   icon,
   title,
   detail,
+  href,
 }: {
   icon: React.ReactNode;
   title: string;
   detail: string;
+  href?: "/referee" | "/player";
 }) {
-  return (
-    <button className="panel flex w-full items-center gap-3 rounded-2xl p-3.5 text-left">
+  const content = (
+    <>
       <span className="panel-2 flex size-9 shrink-0 items-center justify-center rounded-xl text-primary">
         {icon}
       </span>
@@ -235,6 +250,15 @@ function ProfileAction({
         <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{detail}</span>
       </span>
       <ChevronRight className="size-4 shrink-0 text-muted-foreground" strokeWidth={2.4} />
+    </>
+  );
+  return href ? (
+    <Link to={href} className="panel flex w-full items-center gap-3 rounded-2xl p-3.5 text-left">
+      {content}
+    </Link>
+  ) : (
+    <button className="panel flex w-full items-center gap-3 rounded-2xl p-3.5 text-left">
+      {content}
     </button>
   );
 }
