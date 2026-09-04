@@ -3,9 +3,9 @@
 @import "tw-animate-css";
 
 /*
- * footArena design system — a warm daylight palette.
- * Lime and pitch green carry the football identity; amber and coral provide
- * distinct status signals without turning the interface into a rainbow.
+ * footArena design system — the field palette from the Home and Host reference.
+ * Forest ink and pitch green carry the football identity; amber and coral
+ * provide distinct status signals.
  */
 
 @theme inline {
@@ -47,50 +47,48 @@
 :root {
   --radius: 1rem;
 
-  --background: oklch(0.96 0.018 112);
-  --foreground: oklch(0.17 0.035 158);
+  --background: #e9f8ef;
+  --foreground: #0c1a13;
 
-  --surface: oklch(0.99 0.012 100 / 94%);
-  --surface-2: oklch(0.94 0.025 108 / 95%);
+  --surface: rgb(255 255 255 / 70%);
+  --surface-2: rgb(255 255 255 / 48%);
 
-  --card: oklch(0.99 0.012 100 / 94%);
-  --card-foreground: oklch(0.17 0.035 158);
-  --popover: oklch(0.99 0.012 100);
-  --popover-foreground: oklch(0.17 0.035 158);
+  --card: rgb(255 255 255 / 70%);
+  --card-foreground: #0c1a13;
+  --popover: #f7fcf8;
+  --popover-foreground: #0c1a13;
 
-  /* muted chartreuse — the single brand accent */
-  --primary: oklch(0.56 0.15 125);
-  --primary-foreground: oklch(0.98 0.02 105);
+  --primary: #0e8a52;
+  --primary-foreground: #ffffff;
 
-  /* pitch green — support accent for anything "on the field" */
-  --pitch: oklch(0.42 0.13 154);
-  --pitch-foreground: oklch(0.99 0.01 110);
+  --pitch: #0c1a13;
+  --pitch-foreground: #ffffff;
 
-  --secondary: oklch(0.91 0.025 110 / 92%);
-  --secondary-foreground: oklch(0.25 0.04 155);
-  --muted: oklch(0.89 0.028 108 / 88%);
-  --muted-foreground: oklch(0.34 0.045 155);
-  --accent: oklch(0.86 0.055 92 / 90%);
-  --accent-foreground: oklch(0.25 0.04 155);
+  --secondary: rgb(223 246 234 / 92%);
+  --secondary-foreground: #274b38;
+  --muted: rgb(223 246 234 / 88%);
+  --muted-foreground: #40584b;
+  --accent: rgb(217 122 36 / 16%);
+  --accent-foreground: #7c4816;
 
-  --destructive: oklch(0.63 0.19 27);
-  --destructive-foreground: oklch(0.98 0.01 110);
+  --destructive: #d93b36;
+  --destructive-foreground: #ffffff;
 
-  --border: oklch(0.3 0.055 150 / 14%);
-  --input: oklch(0.3 0.055 150 / 18%);
-  --ring: oklch(0.56 0.15 125 / 50%);
+  --border: rgb(12 26 19 / 14%);
+  --input: rgb(12 26 19 / 18%);
+  --ring: rgb(14 138 82 / 50%);
 
-  --gradient-volt: linear-gradient(135deg, oklch(0.64 0.16 126), oklch(0.53 0.14 112));
-  --gradient-pitch: linear-gradient(150deg, oklch(0.47 0.14 155), oklch(0.32 0.09 158));
+  --gradient-volt: linear-gradient(135deg, #4fd394, #0e8a52);
+  --gradient-pitch: linear-gradient(150deg, #0c1a13, #0c2e20);
   --gradient-veil: linear-gradient(
     180deg,
     transparent 0%,
     transparent 100%
   );
-  --warning: oklch(0.68 0.16 72);
-  --info: oklch(0.56 0.13 220);
-  --shadow-lift: 0 18px 40px -22px oklch(0.2 0.04 150 / 30%);
-  --shadow-volt: 0 14px 34px -16px oklch(0.48 0.13 125 / 28%);
+  --warning: #d97a24;
+  --info: #0e8a52;
+  --shadow-lift: 0 18px 40px -22px rgb(8 40 26 / 30%);
+  --shadow-volt: 0 14px 34px -16px rgb(14 138 82 / 28%);
 }
 
 .backdrop-text {
@@ -117,8 +115,8 @@
 
   body {
     background-color: var(--color-background);
-    background-image: radial-gradient(circle at 8% 0%, oklch(0.82 0.08 125 / 14%), transparent 30rem),
-      radial-gradient(circle at 100% 35%, oklch(0.62 0.08 185 / 12%), transparent 26rem);
+    background-image: radial-gradient(circle at 8% 0%, rgb(79 211 148 / 20%), transparent 30rem),
+      radial-gradient(circle at 100% 35%, rgb(14 138 82 / 14%), transparent 26rem);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;

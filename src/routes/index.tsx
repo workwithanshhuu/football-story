@@ -54,7 +54,7 @@ function LoginScreen() {
       <header className="flex flex-col gap-7">
         <div className="flex items-center gap-2.5">
           <span className="volt-fill flex size-9 items-center justify-center rounded-xl font-display text-lg font-800 leading-none">
-            fA
+            FA
           </span>
           <span className="font-display text-xl font-700 tracking-wide uppercase">
             foot<span className="text-primary">Arena</span>
