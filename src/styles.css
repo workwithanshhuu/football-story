@@ -144,8 +144,8 @@
 /* subtle pitch/grid texture used over photography */
 @utility grid-lines {
   background-image:
-    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+    linear-gradient(to right, oklch(0.98 0.01 140 / 6%) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.98 0.01 140 / 6%) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
