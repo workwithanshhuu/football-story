@@ -31,3 +31,12 @@
 - This is a Vite + React + TanStack Start app. Routes live in `src/routes/`; shared UI lives in `src/components/`.
 - Prefer existing components, tokens, and `lucide-react` icons. Preserve the visual language in [`docs/figma-design-spec.md`](docs/figma-design-spec.md).
 - Use `pnpm lint` and `pnpm build` for validation when the change touches application code.
+
+## Role and Match Scenario Model
+
+- Treat [`docs/user-role-scenarios.md`](docs/user-role-scenarios.md) as the scenario reference for all role, match, logging, scorecard, stats, sharing, and permission changes.
+- Keep these concepts separate: **account role** (what the user can do generally), **match role** (how they participate in one match), and **permission** (what they can do to that match's data).
+- Before implementing a relevant change, identify which scenario(s) it supports and preserve the distinction between a detailed live logger and a basic post-match result submitter.
+- Enforce the single active logger per match. A player, host, referee, or scorer may hold that designation, but participant status alone must never grant event-write permission.
+- Do not introduce a new account type for a combination already expressible as switchable account roles plus match-scoped assignments. If behavior or the API contract changes, trace it to the applicable requirement IDs and update the canonical docs together.
+- Use the role-aware change workflow in [`.github/skills/role-aware-product-changes/SKILL.md`](.github/skills/role-aware-product-changes/SKILL.md) when changing role-sensitive behavior.
