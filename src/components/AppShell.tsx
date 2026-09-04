@@ -18,7 +18,7 @@ export function AppShell({
       {/* layer 0 — photograph */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 bg-cover bg-center"
+        className="stadium-backdrop pointer-events-none fixed inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${stadium})` }}
       />
       {/* layer 1 — darkening veil so content stays legible */}

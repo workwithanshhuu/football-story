@@ -2,7 +2,7 @@ import pitchLoggerHtml from "../../docs/pitch-logger-v9.html?raw";
 import matchLoggerHtml from "../../docs/match-logger.html?raw";
 import stadium from "@/assets/stadium-night.jpg";
 import { List, Map } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const themeOverrides = `
 <style>
@@ -83,15 +83,35 @@ body:before { content: ""; position: fixed; inset: 0; z-index: -1; background: l
 .ng.team-away.on { background: #68413d; border-color: #9c655e; }
 .pl .av { display: none; }
 .pl { gap: 4px; }
+.light body { background: #eef2e7 url("${stadium}") center / cover fixed; color: #18231d; }
+.light body:before { background: linear-gradient(to right, rgba(31,83,55,.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(31,83,55,.08) 1px, transparent 1px); }
+.light .phone, .light .app { background: rgba(249,252,244,.86); }
+.light .board, .light .scoreboard, .light .sheetcard, .light .logger-panel, .light .pitch-card, .light .action-sheet { background: rgba(255,255,251,.94); color: #18231d; }
+.light .board { background: rgba(247,251,240,.96); }
+.light .stbtn, .light .st, .light .pl, .light .ng, .light .bp, .light .ac, .light .skip, .light .team-badge.home > span { background: #f0f4e9; color: #18231d; }
+.light .switch, .light .log, .light .bar, .light .tabs, .light .bench, .light .actbar, .light .fwrap, .light .msheet { background: rgba(240,245,233,.94); color: #18231d; }
+.light .gpanel, .light .gpanel .gtop, .light .gpanel .gbody { background: #f7faf2; color: #18231d; }
 </style>`;
 
-function themedDocument(html: string) {
-  return html.replace("</head>", `${themeOverrides}</head>`);
+function themedDocument(html: string, isLight: boolean) {
+  const themedHtml = isLight ? html.replace("<html", '<html class="light"') : html;
+  return themedHtml.replace("</head>", `${themeOverrides}</head>`);
 }
 
 export function LoggerFrame({ screen }: { screen: "pitch" | "match" }) {
   const [view, setView] = useState(screen);
+  const [isLight, setIsLight] = useState(false);
   const html = view === "pitch" ? pitchLoggerHtml : matchLoggerHtml;
+
+  useEffect(() => {
+    setIsLight(localStorage.getItem("footArena.theme") === "light");
+    const handleThemeChange = (event: Event) => {
+      setIsLight((event as CustomEvent<{ isLight: boolean }>).detail.isLight);
+    };
+    window.addEventListener("footArena:theme-change", handleThemeChange);
+    return () => window.removeEventListener("footArena:theme-change", handleThemeChange);
+  }, []);
+
   return (
     <main className="min-h-screen w-full overflow-hidden bg-[#0b100d]">
       <div className="pointer-events-auto absolute left-[calc(50%+104px)] top-[23px] z-10 flex h-6 w-[46px] items-center gap-0.5 rounded-full border border-white/15 bg-[#101612]/90 p-0.5 shadow-lg backdrop-blur-md">
@@ -116,7 +136,7 @@ export function LoggerFrame({ screen }: { screen: "pitch" | "match" }) {
       </div>
       <iframe
         title={view === "pitch" ? "Pitch logger" : "Match logger"}
-        srcDoc={themedDocument(html)}
+        srcDoc={themedDocument(html, isLight)}
         className="block min-h-screen w-full border-0"
       />
     </main>

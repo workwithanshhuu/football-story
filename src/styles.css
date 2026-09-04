@@ -5,9 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * footArena design system — one dark "night match" theme.
- * Accent scale is single-hue: volt lime (primary) + pitch green (support).
- * No other accent hues. Gradients are all derived from these two tokens.
+ * footArena design system — a stadium-at-dusk palette with a warm daylight mode.
+ * Lime and pitch green carry the football identity; amber and coral provide
+ * distinct status signals without turning the interface into a rainbow.
  */
 
 @theme inline {
@@ -40,6 +40,8 @@
   --color-pitch-foreground: var(--pitch-foreground);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
   --font-display: "Barlow Condensed", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
@@ -47,30 +49,30 @@
 :root {
   --radius: 1rem;
 
-  --background: oklch(0.17 0.018 165);
+  --background: oklch(0.29 0.018 165);
   --foreground: oklch(0.97 0.008 130);
 
-  --surface: oklch(0.23 0.02 165 / 72%);
-  --surface-2: oklch(0.28 0.022 165 / 62%);
+  --surface: oklch(0.35 0.02 165 / 82%);
+  --surface-2: oklch(0.4 0.022 165 / 76%);
 
-  --card: oklch(0.23 0.02 165 / 72%);
+  --card: oklch(0.35 0.02 165 / 82%);
   --card-foreground: oklch(0.97 0.008 130);
-  --popover: oklch(0.2 0.02 165);
+  --popover: oklch(0.32 0.02 165);
   --popover-foreground: oklch(0.97 0.008 130);
 
-  /* volt lime — the single brand accent */
-  --primary: oklch(0.91 0.19 122);
-  --primary-foreground: oklch(0.26 0.09 130);
+  /* muted chartreuse — the single brand accent */
+  --primary: oklch(0.82 0.11 122);
+  --primary-foreground: oklch(0.25 0.055 130);
 
   /* pitch green — support accent for anything "on the field" */
   --pitch: oklch(0.55 0.13 155);
   --pitch-foreground: oklch(0.98 0.01 130);
 
-  --secondary: oklch(0.3 0.024 165 / 70%);
+  --secondary: oklch(0.41 0.024 165 / 80%);
   --secondary-foreground: oklch(0.96 0.008 130);
-  --muted: oklch(0.3 0.02 165 / 55%);
-  --muted-foreground: oklch(0.74 0.015 150);
-  --accent: oklch(0.34 0.03 160 / 75%);
+  --muted: oklch(0.41 0.02 165 / 70%);
+  --muted-foreground: oklch(0.83 0.015 150);
+  --accent: oklch(0.45 0.03 160 / 80%);
   --accent-foreground: oklch(0.97 0.008 130);
 
   --destructive: oklch(0.63 0.19 27);
@@ -78,18 +80,77 @@
 
   --border: oklch(0.98 0.01 140 / 12%);
   --input: oklch(0.98 0.01 140 / 14%);
-  --ring: oklch(0.91 0.19 122 / 55%);
+  --ring: oklch(0.82 0.11 122 / 55%);
 
-  --gradient-volt: linear-gradient(135deg, oklch(0.94 0.18 128), oklch(0.86 0.2 118));
-  --gradient-pitch: linear-gradient(150deg, oklch(0.48 0.12 158), oklch(0.3 0.06 165));
+  --gradient-volt: linear-gradient(135deg, oklch(0.85 0.11 128), oklch(0.77 0.12 118));
+  --gradient-pitch: linear-gradient(150deg, oklch(0.54 0.12 158), oklch(0.36 0.06 165));
   --gradient-veil: linear-gradient(
     180deg,
-    oklch(0.14 0.02 165 / 42%) 0%,
-    oklch(0.14 0.02 165 / 68%) 55%,
-    oklch(0.12 0.018 165 / 88%) 100%
+    oklch(0.24 0.02 165 / 22%) 0%,
+    oklch(0.24 0.02 165 / 38%) 55%,
+    oklch(0.22 0.018 165 / 56%) 100%
   );
   --shadow-lift: 0 18px 40px -22px oklch(0.05 0.02 165 / 90%);
-  --shadow-volt: 0 14px 34px -16px oklch(0.91 0.19 122 / 45%);
+  --shadow-volt: 0 14px 34px -16px oklch(0.82 0.11 122 / 32%);
+}
+
+.light {
+  --background: oklch(0.96 0.018 112);
+  --foreground: oklch(0.17 0.035 158);
+
+  --surface: oklch(0.99 0.012 100 / 94%);
+  --surface-2: oklch(0.94 0.025 108 / 95%);
+
+  --card: oklch(0.99 0.012 100 / 94%);
+  --card-foreground: oklch(0.17 0.035 158);
+  --popover: oklch(0.99 0.012 100);
+  --popover-foreground: oklch(0.17 0.035 158);
+
+  --primary: oklch(0.56 0.15 125);
+  --primary-foreground: oklch(0.98 0.02 105);
+  --pitch: oklch(0.42 0.13 154);
+  --pitch-foreground: oklch(0.99 0.01 110);
+
+  --secondary: oklch(0.91 0.025 110 / 92%);
+  --secondary-foreground: oklch(0.25 0.04 155);
+  --muted: oklch(0.89 0.028 108 / 88%);
+  --muted-foreground: oklch(0.34 0.045 155);
+  --accent: oklch(0.86 0.055 92 / 90%);
+  --accent-foreground: oklch(0.25 0.04 155);
+
+  --border: oklch(0.3 0.055 150 / 14%);
+  --input: oklch(0.3 0.055 150 / 18%);
+  --ring: oklch(0.56 0.15 125 / 50%);
+  --warning: oklch(0.68 0.16 72);
+  --info: oklch(0.56 0.13 220);
+
+  --gradient-volt: linear-gradient(135deg, oklch(0.64 0.16 126), oklch(0.53 0.14 112));
+  --gradient-pitch: linear-gradient(150deg, oklch(0.47 0.14 155), oklch(0.32 0.09 158));
+  --gradient-veil: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 100%
+  );
+  --shadow-lift: 0 18px 40px -22px oklch(0.2 0.04 150 / 30%);
+  --shadow-volt: 0 14px 34px -16px oklch(0.48 0.13 125 / 28%);
+}
+
+.light .stadium-backdrop {
+  opacity: 1;
+  filter: none;
+}
+
+.light .backdrop-text {
+  color: #f5f8f0;
+  text-shadow: 0 1px 3px rgba(8, 24, 16, 0.85);
+}
+
+.light .grid-lines {
+  display: none;
+}
+
+.light .pitch-top-image {
+  opacity: 0.7;
 }
 
 @layer base {
@@ -99,6 +160,8 @@
 
   body {
     background-color: var(--color-background);
+    background-image: radial-gradient(circle at 8% 0%, oklch(0.82 0.08 125 / 14%), transparent 30rem),
+      radial-gradient(circle at 100% 35%, oklch(0.62 0.08 185 / 12%), transparent 26rem);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;

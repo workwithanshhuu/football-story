@@ -11,10 +11,12 @@ import {
   Handshake,
   Home,
   MapPin,
+  Moon,
   Plus,
   Search,
   Share2,
   ShieldCheck,
+  Sun,
   Trophy,
   UserRound,
 } from "lucide-react";
@@ -123,8 +125,8 @@ function HomeScreen() {
             {initials || "FA"}
           </span>
           <div className="leading-tight">
-            <p className="text-[15px] font-700">{displayName}</p>
-            <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <p className="backdrop-text text-[15px] font-700">{displayName}</p>
+            <p className="backdrop-text flex items-center gap-1 text-[11px] opacity-85">
               <MapPin className="size-3" strokeWidth={2.4} />
               {user?.city
                 ? `${user.city}${user.area ? ` · ${user.area}` : ""}`
@@ -133,6 +135,7 @@ function HomeScreen() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <IconButton label="Search">
             <Search className="size-[18px]" strokeWidth={2.2} />
           </IconButton>
@@ -149,7 +152,9 @@ function HomeScreen() {
             <p className="text-[10px] font-600 tracking-[0.14em] text-muted-foreground uppercase">
               Skill
             </p>
-            <p className="tnum font-display text-3xl leading-none font-700 text-primary">{user?.skillSelfRating ?? "—"}</p>
+            <p className="tnum font-display text-3xl leading-none font-700 text-primary">
+              {user?.skillSelfRating ?? "—"}
+            </p>
           </div>
           <div className="w-px bg-border" />
           <div className="grid flex-1 grid-cols-3 gap-1">
@@ -172,10 +177,10 @@ function HomeScreen() {
             loading="lazy"
             width={1024}
             height={1024}
-            className="absolute inset-0 size-full object-cover opacity-25"
+            className="pitch-top-image absolute inset-0 size-full object-cover opacity-46"
           />
           <div aria-hidden className="veil absolute inset-0" />
-          <div className="relative p-4">
+          <div className="relative bg-white/55 p-4">
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-1 text-[10px] font-700 tracking-[0.12em] text-primary uppercase">
                 <Clock3 className="size-3" strokeWidth={2.6} />
@@ -312,6 +317,43 @@ function HomeScreen() {
   );
 }
 
+function ThemeToggle() {
+  const [isLight, setIsLight] = useState(false);
+
+  useEffect(() => {
+    const storedTheme = localStorage.getItem("footArena.theme");
+    const shouldUseLight = storedTheme === "light";
+    setIsLight(shouldUseLight);
+    document.documentElement.classList.toggle("light", shouldUseLight);
+  }, []);
+
+  function toggleTheme() {
+    const nextIsLight = !isLight;
+    setIsLight(nextIsLight);
+    document.documentElement.classList.toggle("light", nextIsLight);
+    localStorage.setItem("footArena.theme", nextIsLight ? "light" : "dark");
+    window.dispatchEvent(
+      new CustomEvent("footArena:theme-change", { detail: { isLight: nextIsLight } }),
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      aria-label={isLight ? "Switch to dark mode" : "Switch to light mode"}
+      aria-pressed={isLight}
+      onClick={toggleTheme}
+      className="panel-2 flex size-10 items-center justify-center rounded-xl text-primary transition-transform active:scale-95"
+    >
+      {isLight ? (
+        <Sun className="size-[18px]" strokeWidth={2.2} />
+      ) : (
+        <Moon className="size-[18px]" strokeWidth={2.2} />
+      )}
+    </button>
+  );
+}
+
 function IconButton({
   children,
   label,
@@ -347,7 +389,9 @@ function Stat({ icon, value, label }: { icon: React.ReactNode; value: string; la
 function SectionHead({ title, action }: { title: string; action: string }) {
   return (
     <div className="flex items-baseline justify-between px-0.5">
-      <h3 className="font-display text-[17px] font-700 tracking-wide uppercase">{title}</h3>
+      <h3 className="backdrop-text font-display text-[17px] font-700 tracking-wide uppercase">
+        {title}
+      </h3>
       <button className="text-[11px] font-600 text-primary">{action}</button>
     </div>
   );
