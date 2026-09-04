@@ -1,0 +1,3641 @@
+openapi: 3.1.0
+info:
+  title: Football OS API — Phase 0
+  version: "0.1.0"
+  description: >
+    API surface for Phase 0 ("Find it, play it, flex it"): auth & onboarding,
+    match discovery/booking, structured hosting (format/venue/teams/squads),
+    join requests, live match logging (list + pitch view share the same
+    event model), derived shareable scorecards, and minimal profile/career log.
+
+    Detailed operation semantics, ownership boundaries, error behavior,
+    pagination, consistency, security, evolution decisions, and implementation
+    status are documented in docs/design/api/design.md.
+
+
+    Design notes for reviewers:
+    - Built as a set of independently deployable microservices behind a single
+      Amazon API Gateway (HTTP API), each backed by Go Lambda handlers, sharing
+      this one contract file (split per-service at build time via bundling,
+      e.g. redocly bundle / openapi-generator, in the monorepo's `api/` package).
+    - Resource shapes anticipate Phase 1–3 without building them now:
+      `matches.teams[].teamId` is nullable today (Phase 0 = ephemeral per-match
+      team) and will point at a persistent Team resource in Phase 1 without a
+      breaking change. `actionTypes`, `formats`, and `formations` are already
+      generic enough to support 11v11 and beyond. Referee-verified scorecards
+      (Phase 1), tournaments (Phase 1/2), leaderboards/credibility (Phase 1),
+      and live spectator distribution (Phase 2) are additive to these shapes,
+      not replacements.
+    - Collection endpoints that require pagination use opaque cursor pagination
+      with `cursor`, `pageSize`, and `nextCursor`. Bounded catalog reference
+      collections (`/formats`, `/formats/{formatId}/formations`, `/positions`,
+      and `/action-types`) are unpaginated in Phase 0. Offset pagination is not
+      part of the Phase 0 contract; any future exception must be documented in
+      ADR 0001 and in the affected operation.
+  contact:
+    name: Platform Engineering
+servers:
+  - url: https://72f7vsw2ai.execute-api.ap-south-1.amazonaws.com/v1
+    description: Deployed development environment
+
+tags:
+  - name: Auth
+    description: Email/password authentication, password reset, and session management for Phase 0.
+  - name: Users
+    description: Account, roles, and profile management for the authenticated user.
+  - name: Profiles
+    description: Public player profile data owned by profile-service.
+  - name: Placeholders
+    description: >
+      Claim, merge, and removal flow for placeholder players created from a
+      phone number with no account (FR-4.11-*).
+  - name: Catalog
+    description: Reference data — formats, formations, positions, action vocabulary.
+  - name: Venues
+    description: Ad-hoc and (future) verified venues.
+  - name: Matches
+    description: Match discovery, structured hosting setup, squads.
+  - name: JoinRequests
+    description: Requesting to join an open match or challenging a team directly.
+  - name: LiveLogging
+    description: Ball-by-ball / event-by-event match-day logging (list & pitch view share this API).
+  - name: Scorecards
+    description: Derived, shareable match scorecards and career stat rollups.
+  - name: Media
+    description: Presigned upload flow for photos and generated share-cards.
+  - name: Notifications
+    description: Device registration, user preferences, and internal notification event ingestion.
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ---------------------------------------------------------------- AUTH
+  /auth/password-reset/request:
+    post:
+      tags: [Auth]
+      summary: Request a password-reset email
+      description: >
+        Always returns 202 whether or not the email belongs to an active
+        account, preventing account enumeration. When it does, a single-use
+        opaque token valid for one hour is sent by email (FR-4.1-05, ADR 0027).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordResetRequest" }
+      responses:
+        "202":
+          description: If applicable, a password-reset email was queued.
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /auth/password-reset/confirm:
+    post:
+      tags: [Auth]
+      summary: Set a new password using a reset token
+      description: >
+        The token is single-use and expires one hour after issuance. A
+        successful reset revokes all existing refresh-token sessions.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordResetConfirm" }
+      responses:
+        "204": { description: Password reset completed }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/register-email:
+    post:
+      tags: [Auth]
+      summary: Register with email + password (Phase 0 authentication)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, displayName]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password, minLength: 8, maxLength: 72, description: "8–72 UTF-8 bytes; hashed with bcrypt." }
+                displayName: { type: string }
+      responses:
+        "201": { $ref: "#/components/responses/TokenPair" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /auth/login-email:
+    post:
+      tags: [Auth]
+      summary: Log in with email + password (Phase 0 authentication)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        "200": { $ref: "#/components/responses/TokenPair" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        # deviation: 429 does not disclose which credential factor failed, it
+        # only signals the account is temporarily throttled after repeated
+        # failed attempts use the same non-enumerating disclosure boundary as
+        # the other authentication endpoints.
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate a refresh token and issue a new token pair
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/TokenPair" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke the presented refresh-token session
+      description: >
+        Revokes the supplied refresh token in DynamoDB. The access token used
+        for this request may remain valid until its normal expiry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+                  description: Opaque refresh token returned in the token pair.
+      responses:
+        "204": { description: Logged out }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/logout-all:
+    post:
+      tags: [Auth]
+      summary: Revoke all refresh-token sessions for the authenticated user
+      description: >
+        Revokes every refresh-token session for the user identified by the
+        bearer access token. Existing access tokens remain valid until expiry.
+      responses:
+        "204": { description: All sessions logged out }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /users/me/notification-devices:
+    get:
+      tags: [Notifications]
+      summary: List the authenticated user's registered push notification devices
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/NotificationDevice" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Notifications]
+      summary: Register or refresh a device token for push notifications
+      description: >
+        Device registration is independent of location permission. The token is
+        treated as provider-owned state and must be revoked when consent changes,
+        the token is invalid, or a device is removed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NotificationDeviceRegistration" }
+      responses:
+        "201":
+          description: Registered or refreshed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationDevice" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /users/me/notification-devices/{deviceId}:
+    delete:
+      tags: [Notifications]
+      summary: Revoke a registered notification device
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  enum: [user_requested, invalid_token, consent_removed]
+      responses:
+        "204": { description: Device revoked }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /users/me/notification-preferences:
+    get:
+      tags: [Notifications]
+      summary: Get the authenticated user's notification category preferences
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationPreferences" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      tags: [Notifications]
+      summary: Update notification category preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NotificationPreferencesUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationPreferences" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /internal/notifications/events:
+    post:
+      x-internal: true
+      tags: [Notifications]
+      summary: Ingest an internal notification event from a producer service
+      description: >
+        Internal producer-only endpoint. The event envelope carries a stable
+        deduplication key, a safe match context, and an immutable payload that
+        never contains raw coordinates, device positions, provider secrets, or
+        another player's phone number.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NotificationEventEnvelope" }
+      responses:
+        "202": { description: Event accepted for processing }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /internal/users/{userId}/notification-data:
+    delete:
+      x-internal: true
+      tags: [Notifications]
+      summary: Remove a user's notification data during account deletion
+      description: >
+        Idempotently revokes and removes device/channel data and removes the
+        user from recipient lists and delivery intents. Immutable match event
+        history is retained without personal recipient identifiers.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Notification personal data removed }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ---------------------------------------------------------------- USERS
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get the authenticated user's account + profile
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+    patch:
+      tags: [Users]
+      summary: Update onboarding/profile fields ("How do you show up on the pitch?", position(s), etc.)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserProfileUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [Users]
+      summary: Delete the authenticated account (anonymises, does not erase history)
+      description: >
+        Immediately revokes access and marks the account deleted, then runs an
+        asynchronous anonymization workflow that removes personal identifiers
+        within 30 days and converts the player to `Player #N` in past
+        scorecards. The underlying events remain because erasing them would
+        corrupt every teammate's and opponent's career record (FR-4.13-06,
+        ADR 0018, ADR 0020).
+      responses:
+        "202": { description: Deletion scheduled }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /users/me/export:
+    post:
+      tags: [Users]
+      summary: Request an export of the complete career record (FR-4.13-07)
+      description: >
+        Creates or reuses an asynchronous export job owned by identity-service
+        (ADR 0020). At most one active export per `(user, format)` may exist
+        at a time; repeat requests return the current job rather than creating
+        duplicates. `format=json` is the full-fidelity canonical export.
+        `format=csv` returns a ZIP package of multiple CSV files so nested
+        match and event history is not flattened into a lossy single sheet.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [format]
+              properties:
+                format: { type: string, enum: [json, csv] }
+      responses:
+        "202":
+          description: Export queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CareerExport" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /users/me/exports/{exportId}:
+    get:
+      tags: [Users]
+      summary: Check export status and retrieve the download URL once ready
+      description: >
+        Returns the durable export-job record. When `status=ready`,
+        `downloadUrl` is a short-lived presigned URL generated for this read,
+        not a permanent public object URL (ADR 0020).
+      parameters:
+        - name: exportId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CareerExport" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /internal/users/{userId}/exports/{exportId}/generate:
+    post:
+      x-internal: true
+      tags: [Users]
+      summary: Generate one queued career export artifact
+      description: >
+        Called by identity-service itself through an asynchronous direct AWS
+        Lambda Invoke over IAM, never through the shared API Gateway. The
+        worker reads service-owned export slices, writes an encrypted S3
+        artifact, and marks the durable export job `ready` or `failed`
+        (ADR 0020).
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+        - name: exportId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Export generation completed or was already completed }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /internal/users/{userId}/deletion/anonymize:
+    post:
+      x-internal: true
+      tags: [Users]
+      summary: Run the deferred anonymization workflow for one deleted account
+      description: >
+        Called by identity-service itself through an asynchronous direct AWS
+        Lambda Invoke over IAM, never through the shared API Gateway. The
+        worker completes the durable account-deletion workflow by clearing
+        identity-owned identifiers and invoking downstream service-owned
+        anonymization boundaries (ADR 0020).
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+      responses:
+        "204": { description: Deletion anonymization completed or was already completed }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /users/me/roles:
+    get:
+      tags: [Users]
+      summary: List roles held by the authenticated user
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RoleAssignment" }
+    post:
+      tags: [Users]
+      summary: Add a role to the authenticated user (e.g. opt into Referee or Volunteer)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { $ref: "#/components/schemas/Role" }
+      responses:
+        "201":
+          description: Role added
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RoleAssignment" }
+  /users/me/roles/{role}:
+    delete:
+      tags: [Users]
+      summary: Remove an active role from the authenticated user
+      description: >
+        Deactivates the role assignment. The operation is idempotent. The
+        account must retain at least one active role, so removing the final
+        role is rejected.
+      parameters:
+        - $ref: "#/components/parameters/RolePath"
+      responses:
+        "204": { description: Role removed }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /users/{userId}:
+    get:
+      tags: [Users]
+      summary: Get a public user projection for profile linking
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublicUser" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /internal/matches/squad-membership-claims:
+    post:
+      x-internal: true
+      tags: [Matches]
+      summary: Claim selected placeholder squad memberships for a verified user
+      description: >
+        Called by identity-service after it has already decided which
+        placeholder memberships may attach to a verified user (ADR 0020).
+        This endpoint is the apply step only: it must never rediscover by
+        phone number or auto-claim dormant history on its own. Not reachable
+        over the shared API Gateway — invoked via direct AWS Lambda Invoke
+        over IAM (ADR 0011), which is this endpoint's sole authorization
+        boundary.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, squadMemberIds]
+              properties:
+                userId: { type: string, format: uuid }
+                squadMemberIds:
+                  type: array
+                  minItems: 1
+                  items: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Claimed squad members (an empty array when none matched)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ClaimedSquadMember" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /internal/matches/placeholder-discoveries:
+    post:
+      x-internal: true
+      tags: [Matches]
+      summary: Discover unclaimed placeholder memberships for a verified phone number
+      description: >
+        Called by identity-service after a phone number has been verified.
+        Returns candidate placeholder memberships without mutating ownership so
+        identity-service can apply ADR 0020's consent, dormancy, and rejection
+        rules before issuing any claim command. Not reachable over the shared
+        API Gateway — invoked via direct AWS Lambda Invoke over IAM.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phoneNumber]
+              properties:
+                phoneNumber: { type: string, example: "+919876543210" }
+      responses:
+        "200":
+          description: Candidate placeholder memberships
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/DiscoveredPlaceholderMembership" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /internal/matches/squad-membership-claims/{squadMemberId}:
+    delete:
+      x-internal: true
+      tags: [Matches]
+      summary: Detach one previously claimed squad membership from a user
+      description: >
+        Called by identity-service when a claimed placeholder match is later
+        rejected within the allowed review window (ADR 0016, ADR 0020). The
+        detach is idempotent and scoped to the supplied squad member only.
+        Not reachable over the shared API Gateway — invoked via direct AWS
+        Lambda Invoke over IAM.
+      parameters:
+        - name: squadMemberId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId: { type: string, format: uuid }
+      responses:
+        "204": { description: Detached }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /internal/matches/placeholder-anonymizations:
+    post:
+      x-internal: true
+      tags: [Matches]
+      summary: Anonymize unclaimed placeholder memberships for a refused phone number
+      description: >
+        Called by identity-service after the placeholder-removal flow verifies
+        the phone number and records it in the do-not-add list (ADR 0020).
+        Match-service anonymizes its own placeholder-owned render surfaces and
+        must not re-expose the refused phone number. Not reachable over the
+        shared API Gateway — invoked via direct AWS Lambda Invoke over IAM.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phoneNumber]
+              properties:
+                phoneNumber: { type: string, example: "+919876543210" }
+      responses:
+        "200":
+          description: Anonymization applied
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [anonymizedCount]
+                properties:
+                  anonymizedCount: { type: integer, minimum: 0 }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /users/me/placeholder-matches:
+    get:
+      tags: [Placeholders]
+      summary: Matches found for this account's number on first claim ("we found N matches")
+      description: >
+        Returns identity-service's durable claim-review rows for the verified
+        number. Recent history is auto-confirmed and then applied
+        asynchronously; dormant 24-month history stays pending until confirmed
+        one match at a time (FR-4.11-03, FR-4.11-05, ADR 0020).
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, confirmed, rejected] }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PlaceholderMatchClaim" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /users/me/placeholder-matches/{matchId}/confirm:
+    post:
+      tags: [Placeholders]
+      summary: Confirm a placeholder match belongs to this account
+      description: >
+        Idempotent. Required per-match for dormant (24-month) history, where
+        confirmation is the command that authorizes the downstream match and
+        scorecard association work. For recently active history this is only an
+        acknowledgement, because the claim was already auto-confirmed and is
+        being applied asynchronously (ADR 0020).
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "200":
+          description: Confirmed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlaceholderMatchClaim" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /users/me/placeholder-matches/{matchId}/reject:
+    post:
+      tags: [Placeholders]
+      summary: Reject a mis-attributed placeholder match within 14 days of claim
+      description: >
+        Records the claim as rejected and, if the match was already associated,
+        triggers downstream detach work without deleting the underlying event
+        ledger or teammates'/opponents' records (FR-4.11-03, ADR 0020).
+        Returns 409 once the 14-day rejection window has elapsed.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlaceholderMatchClaim" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /placeholders/otp/request:
+    post:
+      tags: [Placeholders]
+      summary: Request an OTP to manage a placeholder without creating an account
+      description: >
+        Backs the "right to refuse" flow (FR-4.11-06): verifying a number is
+        enough to remove its placeholder even for someone who never signs up.
+        This is a purpose-scoped privacy operation and is not valid for login or
+        signup. Rate limiting is enforced on the phone number for this purpose
+        (ADR 0020). It never creates an account or issues a session; Phase 0
+        account authentication uses email/password only (ADR 0028).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phoneNumber]
+              properties:
+                phoneNumber: { type: string, example: "+919876543210" }
+      responses:
+        "202":
+          description: OTP dispatched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  challengeId: { type: string, format: uuid }
+                  expiresInSeconds: { type: integer, example: 300 }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /placeholders/remove:
+    post:
+      tags: [Placeholders]
+      summary: Verify a number and permanently remove its placeholder (FR-4.11-06)
+      description: >
+        Verifies a placeholder-removal OTP, creates or preserves the do-not-
+        add record for the phone number, and asynchronously anonymizes every
+        unclaimed placeholder occurrence to `Player #N` while preserving every
+        teammate's and opponent's record. A later signup on the same number is
+        a clean account and does not silently reclaim the refused history.
+        Hosts attempting to re-add the number afterward see a plain-language
+        block (403 on squad-member creation), never a silent failure and never
+        the reason for the block (ADR 0020).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [challengeId, otp]
+              properties:
+                challengeId: { type: string, format: uuid }
+                otp: { type: string, example: "482913" }
+      responses:
+        "200": { description: Removed }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /internal/users/phone-resolution:
+    post:
+      x-internal: true
+      tags: [Users]
+      summary: Resolve whether a phone number maps to an account, a creatable placeholder, or a do-not-add block
+      description: >
+        Called by match-service before creating a placeholder squad member.
+        Identity-service normalizes the supplied number and returns the only
+        service-authoritative answer for whether that number belongs to an
+        existing active user, may become a placeholder, or is blocked by the
+        do-not-add list (ADR 0020). Not reachable over the shared API Gateway
+        — invoked via direct AWS Lambda Invoke over IAM.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phoneNumber]
+              properties:
+                phoneNumber: { type: string, example: "+919876543210" }
+      responses:
+        "200":
+          description: Resolution result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InternalPhoneResolution" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /internal/users/{userId}/profile:
+    get:
+      x-internal: true
+      tags: [Profiles]
+      summary: Get a user's full profile aggregate (identity-service composition boundary)
+      description: >
+        Called by identity-service to compose GET/PATCH /users/me (ADR 0010).
+        Full-fidelity read: unlike the public PublicProfile projection, this
+        includes preferredFoot and skillSelfRating and omits careerTotals.
+        Not reachable over the shared API Gateway (x-internal operations are
+        excluded from route generation) — invoked via direct AWS Lambda
+        Invoke over IAM (ADR 0011); this operation documents the request/
+        response payload shape only. The caller's bearer token is still
+        forwarded and profile-service still requires it to name userId
+        itself (ADR 0010 §2) as defense in depth.
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InternalProfile" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      x-internal: true
+      tags: [Profiles]
+      summary: Create or partially update a user's profile (identity-service composition boundary)
+      description: >
+        Upserts profile-owned fields. Omitted fields are left unchanged
+        (true partial update, merge-then-validate); an absent profile row is
+        created on first call. positionCodes/primaryPositionCode are
+        resolved against the position catalog (ADR 0010 §4, IDENT-7/9).
+        Invoked via direct AWS Lambda Invoke over IAM, not HTTP (ADR 0011) —
+        see the GET operation's description for what that means here.
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InternalProfileUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InternalProfile" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /internal/users/{userId}/profile-anonymization:
+    post:
+      x-internal: true
+      tags: [Profiles]
+      summary: Anonymize profile-owned personal fields for a deleted account
+      description: >
+        Called by identity-service's deletion workflow after the account is
+        marked deleted. Profile-service mutates only its own data, clearing
+        profile-owned personal fields without deleting the historical user id
+        itself (ADR 0018, ADR 0020). Not reachable over the shared API Gateway
+        — invoked via direct AWS Lambda Invoke over IAM.
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+      responses:
+        "204": { description: Anonymized }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /internal/scorecards/player-record-associations:
+    post:
+      x-internal: true
+      tags: [Scorecards]
+      summary: Associate claimed placeholder records to a user and rebuild derived stats
+      description: >
+        Called by identity-service after a placeholder claim is confirmed.
+        Scorecard-service updates only its own derived player-match and career
+        projections for the supplied claimed memberships and does so
+        idempotently (ADR 0016, ADR 0020). Not reachable over the shared API
+        Gateway — invoked via direct AWS Lambda Invoke over IAM.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, claims]
+              properties:
+                userId: { type: string, format: uuid }
+                claims:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [matchId, squadMemberId]
+                    properties:
+                      matchId: { type: string, format: uuid }
+                      squadMemberId: { type: string, format: uuid }
+      responses:
+        "204": { description: Associated }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /internal/scorecards/player-record-associations/{squadMemberId}:
+    delete:
+      x-internal: true
+      tags: [Scorecards]
+      summary: Detach one claimed placeholder record from a user and rebuild derived stats
+      description: >
+        Called by identity-service when a placeholder claim is rejected within
+        the review window. Scorecard-service reverses the affected user
+        association for the supplied squad membership and reprojects its own
+        read models idempotently (ADR 0020). Not reachable over the shared API
+        Gateway — invoked via direct AWS Lambda Invoke over IAM.
+      parameters:
+        - name: squadMemberId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, matchId]
+              properties:
+                userId: { type: string, format: uuid }
+                matchId: { type: string, format: uuid }
+      responses:
+        "204": { description: Detached }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /internal/scorecards/placeholder-anonymizations:
+    post:
+      x-internal: true
+      tags: [Scorecards]
+      summary: Anonymize refused placeholder records in derived scorecard surfaces
+      description: >
+        Called by identity-service after a verified placeholder-removal flow.
+        Scorecard-service anonymizes the supplied placeholder memberships in
+        its own derived read models and preserves every teammate's and
+        opponent's statistics (ADR 0016, ADR 0020). Not reachable over the
+        shared API Gateway — invoked via direct AWS Lambda Invoke over IAM.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [claims]
+              properties:
+                claims:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [matchId, squadMemberId]
+                    properties:
+                      matchId: { type: string, format: uuid }
+                      squadMemberId: { type: string, format: uuid }
+      responses:
+        "204": { description: Anonymized }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /internal/users/{userId}/scorecard-anonymization:
+    post:
+      x-internal: true
+      tags: [Scorecards]
+      summary: Anonymize a deleted user's scorecard-facing identity projections
+      description: >
+        Called by identity-service's deletion workflow after the account is
+        marked deleted. Scorecard-service anonymizes its own user-facing
+        projections for that user id without erasing the underlying historical
+        events (ADR 0018, ADR 0020). Not reachable over the shared API Gateway
+        — invoked via direct AWS Lambda Invoke over IAM.
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+      responses:
+        "204": { description: Anonymized }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /internal/users/{userId}/career-export:
+    get:
+      x-internal: true
+      tags: [Scorecards]
+      summary: Return the scorecard-owned export slice for one user
+      description: >
+        Called by identity-service's career-export worker through direct AWS
+        Lambda Invoke over IAM. Scorecard-service returns only the derived
+        read models it owns: user-scoped career totals, claimed per-match
+        player stats, and earned milestones. It does not expose raw private
+        persistence or invent match/profile ownership boundaries (ADR 0020).
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+      responses:
+        "200":
+          description: Export slice
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ScorecardCareerExport" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /users/{userId}/profile:
+    get:
+      tags: [Profiles]
+      summary: Get a user's public player profile
+      security: []
+      description: >
+        Returns profile-owned player data separately from the identity-only
+        public user projection. The authenticated /users/me response remains a
+        composed account-and-profile aggregate. This public view includes the
+        profile core, headline career totals, a lightweight per-position action
+        summary, and a bounded preview of recent matches (ADR 0021).
+        careerTotals and perPositionActionSummary are composed synchronously
+        from scorecard-service's GET /users/{userId}/career-stats; recentMatches
+        is composed from the first page of match-service's
+        GET /users/{userId}/matches. If either downstream call is slow,
+        unavailable, or unconfigured, profile-service degrades that slice to
+        zero/empty values rather than failing this request.
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublicProfile" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /users/{userId}/career-stats:
+    get:
+      tags: [Scorecards]
+      operationId: getCareerStats
+      summary: Career totals + per-position action summary (Phase 0 "career log")
+      security: []
+      description: >
+        Eventually consistent with completed live events. A user with no
+        finalized matches yet returns 200 with all-zero counters, an empty
+        perPositionActionSummary, and a null lastMatchAt — this is a normal,
+        common state, not a 404 (ADR 0013). 404 is reserved for identifiers
+        that aren't real accounts, which this operation does not check.
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+      responses:
+        "200":
+          description: OK (all-zero totals when no finalized matches exist yet)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlayerCareerStats" }
+
+  /users/{userId}/matches:
+    get:
+      tags: [Matches]
+      summary: A player's recent match history
+      security: []
+      description: >
+        Public, cursor-paginated participant match history. This is the
+        canonical full history route; profile-service embeds only a bounded
+        preview of the first page into GET /users/{userId}/profile (ADR 0021).
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchListPage" }
+
+  /users/me/join-requests:
+    get:
+      tags: [JoinRequests]
+      summary: Join requests / challenges sent or received by the authenticated user
+      parameters:
+        - name: direction
+          in: query
+          schema: { type: string, enum: [sent, received], default: sent }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/JoinRequestStatus" }
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/JoinRequest" }
+                  nextCursor: { type: string, nullable: true }
+
+  # ---------------------------------------------------------------- CATALOG
+  /formats:
+    get:
+      tags: [Catalog]
+      summary: List match formats (5v5, 6v6, 7v7, 11v11, ...)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Format" }
+
+  /formats/{formatId}/formations:
+    get:
+      tags: [Catalog]
+      summary: List default formations available for a format
+      parameters:
+        - name: formatId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Formation" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /positions:
+    get:
+      tags: [Catalog]
+      summary: List playing positions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Position" }
+
+  /action-types:
+    get:
+      tags: [Catalog]
+      summary: List the loggable action vocabulary, optionally filtered by position
+      parameters:
+        - name: positionCode
+          in: query
+          schema: { type: string, example: "ST" }
+          description: Filter to actions applicable to this position's category.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ActionType" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------------------------------------------------------------- VENUES
+  /venues:
+    get:
+      tags: [Venues]
+      summary: Search structured venues by city or location
+      description: >
+        Returns reusable venue records. City/name discovery may be used without
+        coordinates and includes coordinate-free records. Geographic search
+        requires lat, lng, and radiusKm together and excludes only records
+        without a complete usable point, ordered by distance then stable ID.
+        Venue records are optional for match setup because matches support a
+        required free-text venue snapshot fallback.
+      parameters:
+        - name: city
+          in: query
+          schema: { type: string }
+        - name: name
+          in: query
+          schema: { type: string }
+          description: Case-insensitive venue-name filter; usable without coordinates.
+        - name: lat
+          in: query
+          schema: { type: number, format: double }
+          description: Search latitude. Must be supplied with lng and radiusKm.
+        - name: lng
+          in: query
+          schema: { type: number, format: double }
+          description: Search longitude. Must be supplied with lat and radiusKm.
+        - name: radiusKm
+          in: query
+          schema: { type: number, format: double, minimum: 0, maximum: 200 }
+          description: Search radius in kilometres; positive when lat and lng are supplied.
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Venue" }
+                  nextCursor: { type: string, nullable: true }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "429":
+          description: Geographic search rate limit exceeded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Venues]
+      summary: Create an ad-hoc structured venue
+      description: >
+        Creates a reusable venue record for a host-entered place. This does not
+        book the venue or mark it as a verified partner. Latitude and longitude
+        must be supplied together or both omitted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VenueCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Venue" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /venues/{venueId}:
+    get:
+      tags: [Venues]
+      summary: Get venue detail
+      description: >
+        Returns the venue's approved display fields and approximate locality by
+        default. Exact coordinates require an authorized match context for the
+        requesting host or confirmed participant; a generic venue lookup never
+        grants exact-coordinate access.
+      parameters:
+        - name: venueId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Venue" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      tags: [Venues]
+      summary: Correct a venue location
+      description: >
+        Replaces the complete point and its provenance atomically. Only the
+        venue creator may correct it; every correction is recorded with a
+        reason. Existing name/city-only venues remain valid.
+      parameters:
+        - name: venueId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [latitude, longitude, reason]
+              properties:
+                latitude: { type: number, format: double, minimum: -90, maximum: 90 }
+                longitude: { type: number, format: double, minimum: -180, maximum: 180 }
+                source: { $ref: "#/components/schemas/LocationSource" }
+                precision: { $ref: "#/components/schemas/LocationPrecision" }
+                reason: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: Corrected venue
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Venue" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------------------------------------------------------------- MATCHES
+  /matches:
+    get:
+      tags: [Matches]
+      operationId: listMatches
+      summary: Browse/discover matches by location, date, format, status
+      description: >
+        City and venue-name discovery works without device coordinates and
+        includes matches whose venue snapshot has no point. Geographic search
+        requires lat, lng, and radiusKm together, excludes only matches whose
+        snapshot lacks a complete usable point, and orders by distance then
+        stable match ID. Discovery distance is request-scoped metadata.
+      parameters:
+        - name: city
+          in: query
+          schema: { type: string }
+        - name: venueName
+          in: query
+          schema: { type: string }
+          description: Case-insensitive venue-name filter; usable without coordinates.
+        - name: lat
+          in: query
+          schema: { type: number, format: double }
+        - name: lng
+          in: query
+          schema: { type: number, format: double }
+        - name: radiusKm
+          in: query
+          schema: { type: number, default: 10 }
+        - name: dateFrom
+          in: query
+          schema: { type: string, format: date }
+        - name: dateTo
+          in: query
+          schema: { type: string, format: date }
+        - name: formatId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/MatchStatus" }
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchListPage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Matches]
+      operationId: createMatch
+      summary: Start hosting a match (step 1+2 of setup — format, venue, duration; draft status)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MatchCreate" }
+      responses:
+        "201":
+          description: Draft match created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Match" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /matches/{matchId}:
+    get:
+      tags: [Matches]
+      operationId: getMatch
+      summary: Get match detail (venue, time, cost, format, players joined/needed, host)
+      description: >
+        Venue coordinates are returned only to the authenticated host or a
+        confirmed participant. Pre-acceptance and unauthorized private viewers
+        receive approved venue display fields and approximate locality only.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Match" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      tags: [Matches]
+      operationId: updateMatch
+      summary: Update match setup fields while in draft or open status
+      description: >
+        Updates only setup fields. The service performs an expected-status
+        check; live, completed, and cancelled matches cannot be edited.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MatchUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Match" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [Matches]
+      operationId: cancelMatch
+      summary: Cancel a match before kickoff
+      description: >
+        Cancels a draft or open match only (ADR 0014, FR-4.9-02). live is not
+        a legal source status: once a ball has been kicked the match ends as
+        completed, abandoned (POST .../live/abandon), or forfeited (POST
+        .../live/forfeit or POST .../forfeit). Cancellation is idempotent for
+        an already-cancelled match and deactivates any active logger.
+        **Breaking change** from the prior contract, which allowed cancelling
+        a live match (NFR-05) — a client relying on that path must move to
+        the abandon/forfeit operations.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "204": { description: Cancelled }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /matches/{matchId}/publish:
+    post:
+      tags: [Matches]
+      operationId: publishMatch
+      summary: Validate setup and move a match from draft to open
+      description: >
+        Runs the plain-language validation described in FR 4.3: minimum
+        headcount per squad for the chosen format, unique/valid shirt numbers,
+        team names + venue present, duration and period ranges. Returns 422
+        with a full list of what's missing rather than failing on the first error.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "200":
+          description: Published (status now "open")
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Match" }
+        "422": { $ref: "#/components/responses/ValidationIssues" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /matches/{matchId}/forfeit:
+    post:
+      tags: [Matches]
+      operationId: forfeitMatchPreKickoff
+      summary: Record a pre-kickoff forfeit (open->forfeited)
+      description: >
+        A side failed to field the format minimum at the scheduled start, or
+        withdrew after confirmation (FR-4.9-05). Records a `walkover` result
+        with the forfeiting side and a reason; accrues no individual
+        statistics and does not increment matches-played for anyone. Only
+        legal from `open`.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [forfeitingSide, reasonText]
+              properties:
+                forfeitingSide: { $ref: "#/components/schemas/MatchSide" }
+                reasonText: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: Forfeited
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Match" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /internal/matches/{matchId}/live-status:
+    post:
+      x-internal: true
+      tags: [Matches]
+      summary: Push a live-logging-driven status transition into match-service (ADR 0019, ADR 0022)
+      description: >
+        Called by live-logging after a local live-state transition succeeds,
+        or by the stale-match sweep worker when a live match has had no event
+        or clock activity for 6 hours (FR-4.9-07). match-service remains the
+        system of record for `match.matches.status`, result metadata, and the
+        append-only lifecycle audit trail. `status=live` requires the match to
+        currently be `open`; `status=completed`, `abandoned`, and `forfeited`
+        require `live` and carry the transition metadata needed to persist the
+        terminal result/history row. This internal Lambda-invocation endpoint is
+        not reachable directly over the shared API Gateway; its authorization
+        boundary is the direct AWS Lambda Invoke over IAM (ADR 0011), so the
+        supplied lifecycle actor is trusted request metadata rather than derived
+        from a validated end-user principal. Public live-logging routes must use
+        the repo-standard bearer JWT instead of trusting a raw `X-User-ID`
+        header.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InternalLiveStatusPush" }
+      responses:
+        "200":
+          description: Transitioned
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Match" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /matches/{matchId}/lifecycle-transitions:
+    get:
+      tags: [Matches]
+      summary: Append-only history of terminal lifecycle transitions (FR-4.9-08)
+      description: >
+        Visible to match participants. Includes the `system`-actor
+        stale-match sweep transition (FR-4.9-07) when it fired.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MatchLifecycleTransition" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /matches/{matchId}/teams:
+    get:
+      tags: [Matches]
+      summary: List a match's two teams with their squads
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MatchTeam" }
+    post:
+      tags: [Matches]
+      summary: Name a team (home/away) — step 3 of setup
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [side, name]
+              properties:
+                side: { $ref: "#/components/schemas/MatchSide" }
+                name: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchTeam" }
+
+  /matches/{matchId}/teams/{teamId}:
+    patch:
+      tags: [Matches]
+      summary: Rename a team
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - $ref: "#/components/parameters/TeamIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchTeam" }
+
+  /matches/{matchId}/teams/{teamId}/formation-layout:
+    get:
+      tags: [Matches]
+      summary: Resolve ordered on-field formation slots for pitch rendering
+      description: >
+        Returns the selected match format's default formation slots with active
+        starting squad members resolved into each slot. Bench and removed
+        members are excluded; an unresolved slot is returned with `isEmpty` set
+        to true. Slot coordinates are presentation-only and are not persisted.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - $ref: "#/components/parameters/TeamIdPath"
+      responses:
+        "200":
+          description: Ordered formation layout
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FormationLayout" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /matches/{matchId}/teams/{teamId}/squad-members:
+    get:
+      tags: [Matches]
+      summary: List a team's squad
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - $ref: "#/components/parameters/TeamIdPath"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SquadMember" }
+    post:
+      tags: [Matches]
+      summary: Add a player to a squad by phone number (step 4 of setup)
+      description: >
+        Accepts a phone number of an existing user, a prior opponent, or a
+        fresh number. If the number has no matching account, a placeholder
+        squad member is created (displayName + invitedPhoneNumber, userId
+        null) which is later "claimable" once that person signs up.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - $ref: "#/components/parameters/TeamIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SquadMemberCreate" }
+      responses:
+        "201":
+          description: Added
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SquadMember" }
+        "403":
+          description: The phone number is on the do-not-add list (FR-4.11-06); the response never states why.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /matches/{matchId}/squad-members/{memberId}:
+    patch:
+      tags: [Matches]
+      summary: Update shirt number, position, or starting status
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - $ref: "#/components/parameters/MemberIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SquadMemberUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SquadMember" }
+    delete:
+      tags: [Matches]
+      summary: Remove a player from the squad (pre-match only)
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - $ref: "#/components/parameters/MemberIdPath"
+      responses:
+        "204": { description: Removed }
+
+  # ------------------------------------------------------------ JOIN REQUESTS
+  /matches/{matchId}/join-requests:
+    get:
+      tags: [JoinRequests]
+      summary: List join requests / challenges for a match (host view)
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/JoinRequestStatus" }
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/JoinRequest" }
+                  nextCursor: { type: string, nullable: true }
+    post:
+      tags: [JoinRequests]
+      summary: Request to join an open match, or challenge a specific team/player
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/JoinRequestCreate" }
+      responses:
+        "201":
+          description: Created (auto-accepted immediately if host allows auto-accept)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JoinRequest" }
+
+  /matches/{matchId}/join-requests/{requestId}:
+    patch:
+      tags: [JoinRequests]
+      summary: Accept or decline a join request / challenge
+      description: >
+        The join request remains location-neutral. Any venue detail delivered
+        by a confirmation or notification follows server-side match
+        authorization and never includes requester or device coordinates.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [accepted, declined] }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JoinRequest" }
+
+  # ---------------------------------------------------------------- LIVE LOGGING
+  /matches/{matchId}/live/start:
+    post:
+      tags: [LiveLogging]
+      summary: Start live logging — assigns the calling user as the (single) active logger and sets status=live
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                loggerRole: { type: string, enum: [host, referee, scorer], default: host }
+      responses:
+        "200":
+          description: Live state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchLiveState" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /matches/{matchId}/live/state:
+    get:
+      tags: [LiveLogging]
+      summary: Get current live state — score, clock, period, active logger
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchLiveState" }
+
+  /internal/matches/{matchId}/logger-authorization:
+    get:
+      x-internal: true
+      tags: [LiveLogging]
+      summary: Check whether a user is the active logger for a match
+      description: >
+        Not reachable over the shared API Gateway (x-internal operations are
+        excluded from route generation) — invoked via direct AWS Lambda
+        Invoke over IAM (ADR 0011); documents the request/response payload
+        shape only.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - name: userId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Active logger assignment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchLogger" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /matches/{matchId}/live/score-adjust:
+    post:
+      tags: [LiveLogging]
+      summary: Manually step the score up/down for a side (scoreboard header control)
+      description: Requires the active logger. The update is conditional on the current live-state version and rejects a decrement below zero.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [side, delta]
+              properties:
+                side: { $ref: "#/components/schemas/MatchSide" }
+                delta: { type: integer, enum: [1, -1] }
+      responses:
+        "200":
+          description: Updated live state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchLiveState" }
+
+  /matches/{matchId}/live/clock:
+    patch:
+      tags: [LiveLogging]
+      summary: Pause/resume/advance the match clock and/or period, or record stoppage time
+      description: >
+        Requires the active logger. The update is conditional on the current
+        live-state version so stale clients cannot overwrite newer state. The
+        clock counts up within a period (GAP-10); stoppage time is recorded
+        as additional time via add_stoppage_time rather than by rewinding the
+        clock, and events logged while paused are stamped with the clock
+        value at the moment it stopped (see MatchEvent.duringStoppage).
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action: { type: string, enum: [pause, resume, next_period, add_stoppage_time] }
+                stoppageSeconds: { type: integer, minimum: 1, description: Required when action=add_stoppage_time. }
+      responses:
+        "200":
+          description: Updated live state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchLiveState" }
+
+  /matches/{matchId}/events:
+    get:
+      tags: [LiveLogging]
+      summary: Running event log, most-recent-first (list view feed / pitch view event log)
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/MatchEvent" }
+                  nextCursor: { type: string, nullable: true }
+    post:
+      tags: [LiveLogging]
+      summary: Log an event (goal, shot, tackle, save, card, ...) for a selected squad member
+      description: >
+        Same endpoint powers both the list-view and pitch-view loggers (4.5/4.6) —
+        they share this event model, only the selection UI differs. Goal-type
+        events accept `goalDetail`; contested actions accept `opponentSquadMemberId`
+        and may omit it ("skip and log it anyway"). The caller must be the
+        single active logger and the match must be live. The `Idempotency-Key`
+        header makes retries return the original event; accepted event fields
+        are immutable after creation.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MatchEventCreate" }
+      responses:
+        "201":
+          description: Logged
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchEvent" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /matches/{matchId}/events/{eventId}/undo:
+    post:
+      tags: [LiveLogging]
+      summary: Undo the most recent action in one tap (reverses score if it was a goal)
+      description: >
+        Soft-undoes the requested event by conditionally changing only
+        `isUndone` from false to true. The event must be the latest non-undone
+        action for the match. The event row is never deleted or otherwise
+        edited, and a successful goal undo decrements the live score.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Undone
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchEvent" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /matches/{matchId}/substitutions:
+    post:
+      tags: [LiveLogging]
+      summary: Log a substitution — swaps on-field/bench status
+      description: >
+        View-agnostic live-logging command used by list and pitch clients. The
+        pitch view reaches it through the tap-tap bench flow; another logger
+        view may use the same request shape. Requires the active logger and a
+        live match. The substitution is append-only and cannot be edited or
+        deleted; a reversal, if supported later, is a new compensating record.
+        Reusing the same `Idempotency-Key` returns the original substitution
+        instead of creating a second ledger item.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SubstitutionCreate" }
+      responses:
+        "201":
+          description: Logged
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Substitution" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /matches/{matchId}/live/abandon:
+    post:
+      tags: [LiveLogging]
+      summary: Abandon a live match (live->abandoned), preserving the full event ledger
+      description: >
+        Requires the active logger, the host, or the designated referee
+        (FR-4.9-03). The event ledger is preserved in full \u2014 this is not a
+        deleted match. Records the reason (free-text required when
+        reason=other) and the period/clock at which play stopped. The result
+        is `decided` if at least 50% of scheduled regulation time elapsed,
+        otherwise `no_result` (FR-4.9-04); individual statistics always count.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { $ref: "#/components/schemas/AbandonReason" }
+                reasonText: { type: string, description: "Required when reason=other." }
+      responses:
+        "200":
+          description: Abandoned
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchLiveState" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /matches/{matchId}/live/forfeit:
+    post:
+      tags: [LiveLogging]
+      summary: Record a mid-match forfeit (live->forfeited)
+      description: >
+        A side walked off or refused to continue after dropping below a
+        playable headcount (FR-4.9-05). Requires the active logger, the host,
+        or the designated referee. Records a `walkover` result with the
+        forfeiting side and reason; accrues no individual statistics and does
+        not increment matches-played for anyone. The ledger up to the
+        walkoff is preserved exactly as in an abandonment, though it does not
+        count.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [forfeitingSide, reasonText]
+              properties:
+                forfeitingSide: { $ref: "#/components/schemas/MatchSide" }
+                reasonText: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: Forfeited
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchLiveState" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /internal/live/stale-match-sweep:
+    post:
+      x-internal: true
+      tags: [LiveLogging]
+      summary: Run the stale live-match sweep worker (FR-4.9-07)
+      description: >
+        Scheduled internal worker entrypoint. Finds matches still marked
+        `live` whose live-state `updatedAt` shows no event, substitution,
+        undo, score, or clock activity for at least 6 hours, pushes
+        `status=abandoned`, `actor.type=system`, and `reasonCode=stale`
+        into match-service, then marks the local live state `abandoned`.
+        Not reachable over the shared API Gateway.
+      responses:
+        "200":
+          description: Sweep completed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sweptCount, sweptMatchIds]
+                properties:
+                  sweptCount: { type: integer, minimum: 0 }
+                  sweptMatchIds:
+                    type: array
+                    items: { type: string, format: uuid }
+
+  /matches/{matchId}/live/recovery-bundle:
+    post:
+      tags: [LiveLogging]
+      summary: Upload a fenced device's pending offline queue as a recovery bundle (FR-4.12-07)
+      description: >
+        Used when the logger designation moved to another device mid-match
+        (dead battery, phone handed to a substitute). The old device is
+        fenced by the monotonic live-state version and may still upload its
+        queued events/substitutions here as a single reviewable batch; it is
+        never merged automatically.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecoveryBundleCreate" }
+      responses:
+        "201":
+          description: Recovery bundle recorded, pending review
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecoveryBundle" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /matches/{matchId}/live/recovery-bundle/{bundleId}:
+    patch:
+      tags: [LiveLogging]
+      summary: Accept or reject a recovery bundle as a batch
+      description: >
+        Performed by the current active logger. Accepting appends every
+        contained event/substitution through the normal idempotent ledger
+        write path; rejecting discards the batch without appending anything.
+        The decision is final and applies to the whole batch (FR-4.12-07).
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - name: bundleId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [accepted, rejected] }
+      responses:
+        "200":
+          description: Resolved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecoveryBundle" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /matches/{matchId}/live/end:
+    post:
+      tags: [LiveLogging]
+      summary: End live logging, sets status=completed, and triggers asynchronous scorecard generation
+      description: >
+        Requires the active logger. The operation is idempotent when the match
+        is already completed and returns the completed live state. It does not
+        wait for scorecard projection; GET /matches/{matchId}/scorecard may
+        return 404 until the asynchronous projector has finalized the scorecard.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "200":
+          description: Completed live state; scorecard projection may still be pending
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchLiveState" }
+
+  # ---------------------------------------------------------------- SCORECARDS
+  /matches/{matchId}/scorecard:
+    get:
+      tags: [Scorecards]
+      operationId: getScorecard
+      summary: Get the derived scorecard (final score, goals w/ type, assists, cards, per-player action tally)
+      description: >
+        The scorecard is a location-safe derived surface: it contains no exact
+        venue coordinates, device location, or player location history.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Scorecard" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Scorecards]
+      operationId: flagManOfTheMatch
+      summary: Flag Man of the Match
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [manOfTheMatchSquadMemberId]
+              properties:
+                manOfTheMatchSquadMemberId: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Scorecard" }
+
+  /matches/{matchId}/corrections:
+    get:
+      tags: [Scorecards]
+      summary: Full correction audit trail for a completed match (FR-4.16-03)
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Correction" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Scorecards]
+      summary: Append a post-match correction within the 72-hour window (FR-4.16-02)
+      description: >
+        Only the match's active logger or the host may correct, and only
+        within 72 hours of match completion (ADR 0017). A correction is an
+        append-only compensating event \u2014 it never edits a total in place.
+        The scorecard re-projects from the ledger and its correctionCount
+        increments. Rejected with 409 once the scorecard is frozen.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CorrectionCreate" }
+      responses:
+        "201":
+          description: Correction appended
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Correction" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /matches/{matchId}/scorecard/share-card:
+    post:
+      tags: [Scorecards]
+      operationId: createScorecardShareCard
+      summary: Generate the shareable 9:16 story-shaped image card for this scorecard
+      description: >
+        Generated card content is public-share safe and contains no exact venue
+        coordinates, coordinate-bearing map URL, device location, or phone
+        number. Exact directions require a separate authenticated request.
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "201":
+          description: Share card generated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShareableCard" }
+
+  /users/{userId}/profile-card:
+    post:
+      tags: [Scorecards]
+      operationId: createProfileCard
+      summary: Generate a shareable profile card (career totals snapshot)
+      parameters:
+        - $ref: "#/components/parameters/UserIdPath"
+      responses:
+        "201":
+          description: Share card generated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShareableCard" }
+
+  /users/me/milestones:
+    get:
+      tags: [Scorecards]
+      operationId: listMyMilestones
+      summary: Career milestones achieved (10th match, first hat-trick, ...) with their auto-generated cards
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Milestone" }
+
+  # ---------------------------------------------------------------- MEDIA
+  /media/upload-url:
+    post:
+      tags: [Media]
+      summary: Get a presigned S3 URL to upload a profile photo or generated share card
+      description: >
+        The service validates the content type and maximum size for the selected
+        purpose before issuing the URL. Profile photos accept image/jpeg,
+        image/png, and image/webp up to 10 MiB. Generated share cards accept
+        image/png up to 5 MiB. The client must upload with the returned content
+        type and complete the upload before the URL expires in 300 seconds.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MediaUploadRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [uploadUrl, assetUrl, expiresInSeconds, maxBytes]
+                properties:
+                  uploadUrl: { type: string, format: uri }
+                  assetUrl: { type: string, format: uri }
+                  expiresInSeconds: { type: integer, example: 300, minimum: 1, maximum: 300 }
+                  maxBytes: { type: integer, example: 10485760, minimum: 1, maximum: 10485760 }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+      description: Opaque pagination cursor from a previous response.
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+    UserIdPath:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MatchIdPath:
+      name: matchId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 128 }
+      description: Client-generated key used to make event and substitution retries safe.
+    TeamIdPath:
+      name: teamId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MemberIdPath:
+      name: memberId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RolePath:
+      name: role
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Role" }
+
+  responses:
+    TokenPair:
+      description: Authenticated
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [accessToken, refreshToken, expiresInSeconds, refreshExpiresInSeconds, user]
+            properties:
+              accessToken:
+                type: string
+                description: Signed JWT access token for the Bearer authorization header.
+              refreshToken:
+                type: string
+                description: Opaque, single-use refresh token. Store securely and replace after refresh.
+              expiresInSeconds: { type: integer, example: 900, description: Access-token lifetime. }
+              refreshExpiresInSeconds: { type: integer, example: 2592000, description: Refresh-token lifetime. }
+              user: { $ref: "#/components/schemas/User" }
+    Unauthorized:
+      description: Invalid credentials or expired session
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ValidationError:
+      description: Request failed validation
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: Authenticated user is not allowed to perform this action
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: Request conflicts with the current resource state
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ValidationIssues:
+      description: Request failed domain validation with field-level issues
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    InternalServerError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    MediaUploadRequest:
+      oneOf:
+        - $ref: "#/components/schemas/ProfilePhotoUploadRequest"
+        - $ref: "#/components/schemas/ShareCardUploadRequest"
+
+    ProfilePhotoUploadRequest:
+      type: object
+      required: [purpose, contentType]
+      properties:
+        purpose: { const: profile_photo }
+        contentType:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+          example: image/jpeg
+
+    ShareCardUploadRequest:
+      type: object
+      required: [purpose, contentType]
+      properties:
+        purpose: { const: share_card }
+        contentType:
+          const: image/png
+          example: image/png
+
+    PasswordResetRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+
+    PasswordResetConfirm:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token: { type: string, minLength: 1 }
+        newPassword: { type: string, format: password, minLength: 8, maxLength: 72 }
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string, example: "VALIDATION_ERROR" }
+        message: { type: string }
+        details:
+          type: array
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field: { type: string }
+              message: { type: string }
+
+    NotificationPlatform:
+      type: string
+      enum: [ios, android, web]
+
+    NotificationCategory:
+      type: string
+      enum: [join_requests, match_changes, reminders, match_day, scorecards, placeholder_history]
+
+    NotificationEventType:
+      type: string
+      enum: [join_request_received, join_request_accepted, join_request_declined, match_confirmed, match_rescheduled, match_cancelled, match_reminder_t3h, logger_designated, match_live, scorecard_ready, placeholder_history_found]
+
+    NotificationDevice:
+      type: object
+      required: [id, userId, platform, token, appVersion, locale, timezone, consentGranted, isActive, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        platform: { $ref: "#/components/schemas/NotificationPlatform" }
+        token: { type: string, minLength: 1, description: "Provider token; never exposed in logs or public analytics." }
+        appVersion: { type: string, nullable: true }
+        locale: { type: string, example: "en-IN" }
+        timezone: { type: string, example: "Asia/Kolkata" }
+        consentGranted: { type: boolean }
+        isActive: { type: boolean }
+        lastSeenAt: { type: [string, "null"], format: date-time }
+        revokedAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    NotificationDeviceRegistration:
+      type: object
+      required: [token, platform, appVersion, locale, timezone, consentGranted]
+      properties:
+        token: { type: string, minLength: 1 }
+        platform: { $ref: "#/components/schemas/NotificationPlatform" }
+        appVersion: { type: string }
+        locale: { type: string }
+        timezone: { type: string }
+        consentGranted: { type: boolean }
+        lastSeenAt: { type: [string, "null"], format: date-time }
+
+    NotificationPreference:
+      type: object
+      required: [category, enabled]
+      properties:
+        category: { $ref: "#/components/schemas/NotificationCategory" }
+        enabled: { type: boolean }
+
+    NotificationPreferences:
+      type: object
+      required: [preferences]
+      properties:
+        preferences:
+          type: array
+          items: { $ref: "#/components/schemas/NotificationPreference" }
+
+    NotificationPreferencesUpdate:
+      type: object
+      required: [preferences]
+      properties:
+        preferences:
+          type: array
+          items: { $ref: "#/components/schemas/NotificationPreference" }
+
+    NotificationMatchContext:
+      type: object
+      required: [matchId, scheduledAt, venueName, city, timezone]
+      properties:
+        matchId: { type: string, format: uuid }
+        scheduledAt: { type: string, format: date-time }
+        venueName: { type: string }
+        city: { type: string }
+        approvedAddress: { type: [string, "null"] }
+        timezone: { type: string }
+        status: { type: string, enum: [draft, open, live, completed, cancelled, abandoned, forfeited] }
+
+    NotificationPayload:
+      type: object
+      required: [category, preview, deepLink]
+      properties:
+        category: { $ref: "#/components/schemas/NotificationCategory" }
+        preview: { type: string, maxLength: 140 }
+        deepLink: { type: string, pattern: '^app://matches/[^/?#&=]+$', description: "Opaque authenticated app deep link; it contains only a match reference. Exact venue details are resolved after authentication and authorization." }
+        venueName: { type: [string, "null"] }
+        city: { type: [string, "null"] }
+        approvedAddress: { type: [string, "null"] }
+        matchId: { type: [string, "null"], format: uuid }
+
+    NotificationEventEnvelope:
+      type: object
+      required: [eventId, eventType, occurredAt, schemaVersion, deduplicationKey, recipientUserIds]
+      properties:
+        eventId: { type: string, format: uuid }
+        eventType: { $ref: "#/components/schemas/NotificationEventType" }
+        occurredAt: { type: string, format: date-time }
+        schemaVersion: { type: integer, minimum: 1 }
+        deduplicationKey: { type: string, minLength: 1, description: "Stable producer-side key; replays must not create a second logical notification." }
+        recipientUserIds:
+          type: array
+          items: { type: string, format: uuid }
+          minItems: 1
+        matchContext: { $ref: "#/components/schemas/NotificationMatchContext" }
+        payload: { $ref: "#/components/schemas/NotificationPayload" }
+
+    Role:
+      type: string
+      enum: [player, referee, organizer, volunteer]
+
+    RoleAssignment:
+      type: object
+      properties:
+        role: { $ref: "#/components/schemas/Role" }
+        isActive: { type: boolean }
+        assignedAt: { type: string, format: date-time }
+
+    PreferredFoot:
+      type: string
+      enum: [left, right, both]
+
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        phoneNumber: { type: string, nullable: true }
+        email: { type: string, format: email, nullable: true }
+        displayName:
+          type: string
+          nullable: true
+          # deviation: loosened from non-nullable per ADR 0010 — an email
+          # registration whose eager profile-create attempt failed legitimately
+          # has no profile row yet. Non-breaking (widens the accepted/returned
+          # value set).
+          description: "Null when no profile row exists yet (see ADR 0010)."
+        photoUrl: { type: string, format: uri, nullable: true }
+        city: { type: string, nullable: true }
+        area: { type: string, nullable: true }
+        preferredFoot: { $ref: "#/components/schemas/PreferredFoot" }
+        skillSelfRating: { type: integer, minimum: 1, maximum: 5, nullable: true }
+        positions:
+          type: array
+          items: { type: string, description: "Position code, e.g. ST, CM" }
+          description: "All assigned position codes. When non-empty, primaryPositionCode identifies exactly one primary position."
+        primaryPositionCode:
+          type: string
+          nullable: true
+          description: "The primary assigned position code; null only when no positions are assigned."
+        roles:
+          type: array
+          items: { $ref: "#/components/schemas/Role" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    UserProfileUpdate:
+      type: object
+      properties:
+        displayName: { type: string }
+        photoUrl: { type: string, format: uri }
+        city: { type: string }
+        area: { type: string }
+        preferredFoot: { $ref: "#/components/schemas/PreferredFoot" }
+        skillSelfRating: { type: integer, minimum: 1, maximum: 5 }
+        positionCodes:
+          type: array
+          items: { type: string }
+          description: "Assigned position codes. When non-empty, primaryPositionCode must identify one of these codes."
+        primaryPositionCode:
+          type: string
+          nullable: true
+          description: "Primary position; required when positionCodes is non-empty and must be one of these codes."
+        roles:
+          type: array
+          items: { $ref: "#/components/schemas/Role" }
+          uniqueItems: true
+          description: Multi-select role codes from onboarding. `both` is represented by `[player, referee]`.
+
+    InternalProfile:
+      type: object
+      description: >
+        Full-fidelity profile aggregate returned by
+        GET/PUT /internal/users/{userId}/profile (ADR 0010 §1). Distinct
+        from PublicProfile: includes preferredFoot/skillSelfRating, omits
+        careerTotals.
+      properties:
+        displayName: { type: string, nullable: true }
+        photoUrl: { type: string, format: uri, nullable: true }
+        city: { type: string, nullable: true }
+        area: { type: string, nullable: true }
+        preferredFoot: { $ref: "#/components/schemas/PreferredFoot" }
+        skillSelfRating: { type: integer, minimum: 1, maximum: 5, nullable: true }
+        positions:
+          type: array
+          items: { type: string, description: "Position code, e.g. ST, CM" }
+        primaryPositionCode:
+          type: string
+          nullable: true
+          description: "The primary assigned position code; null only when no positions are assigned."
+
+    InternalProfileUpdate:
+      type: object
+      description: "Partial update: omitted fields are left unchanged (ADR 0010 §4)."
+      properties:
+        displayName: { type: string }
+        photoUrl: { type: string, format: uri }
+        city: { type: string }
+        area: { type: string }
+        preferredFoot: { $ref: "#/components/schemas/PreferredFoot" }
+        skillSelfRating: { type: integer, minimum: 1, maximum: 5 }
+        positionCodes:
+          type: array
+          items: { type: string }
+          description: "Assigned position codes. When non-empty, primaryPositionCode must identify one of these codes."
+        primaryPositionCode:
+          type: string
+          nullable: true
+          description: "Primary position; required when positionCodes is non-empty and must be one of these codes."
+
+    PublicProfile:
+      type: object
+      required: [id, displayName, positions, careerTotals, perPositionActionSummary, recentMatches]
+      properties:
+        id: { type: string, format: uuid }
+        displayName: { type: string }
+        photoUrl: { type: string, nullable: true }
+        positions:
+          type: array
+          items: { type: string }
+        primaryPositionCode:
+          type: string
+          nullable: true
+          description: "The primary assigned position code; null only when no positions are assigned."
+        city: { type: string, nullable: true }
+        careerTotals:
+          type: object
+          description: >
+            Composed from scorecard-service (ADR 0013); all-zero for a user
+            with no finalized matches yet, or if the composition call
+            degrades. Never omitted.
+          properties:
+            matchesPlayed: { type: integer }
+            goals: { type: integer }
+            assists: { type: integer }
+            mvps: { type: integer }
+        perPositionActionSummary:
+          type: object
+          description: >
+            Lightweight public summary composed from scorecard-service's
+            career-stats projection (ADR 0021). Empty when no finalized
+            matches exist yet, or when the composition path degrades.
+          additionalProperties: { type: integer }
+        recentMatches:
+          type: array
+          maxItems: 5
+          description: >
+            Bounded public preview of the player's five most recent
+            participant matches (ADR 0021). Full history remains available
+            through GET /users/{userId}/matches.
+          items: { $ref: "#/components/schemas/PublicProfileRecentMatch" }
+
+    PublicProfileRecentMatch:
+      type: object
+      required: [matchId, status, venueName, formatCode, homeTeamName, awayTeamName]
+      properties:
+        matchId: { type: string, format: uuid }
+        scheduledAt: { type: [string, "null"], format: date-time }
+        status: { $ref: "#/components/schemas/MatchStatus" }
+        resultType:
+          type: [string, "null"]
+          description: Present once the match reaches a terminal state.
+        venueName: { type: string }
+        formatCode: { type: string, example: "6v6" }
+        homeTeamName: { type: string }
+        awayTeamName: { type: string }
+
+    PublicUser:
+      type: object
+      required: [id, roles]
+      properties:
+        id: { type: string, format: uuid }
+        roles:
+          type: array
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/Role" }
+
+    PlaceholderMatchClaim:
+      type: object
+      required: [matchId, squadMemberId, status, requiresIndividualConfirmation, discoveredAt, syncStatus]
+      properties:
+        matchId: { type: string, format: uuid }
+        squadMemberId: { type: string, format: uuid }
+        status: { type: string, enum: [pending, confirmed, rejected] }
+        requiresIndividualConfirmation:
+          type: boolean
+          description: True when the placeholder was dormant 24+ months (FR-4.11-05).
+        discoveredAt: { type: string, format: date-time }
+        rejectionDeadline: { type: string, format: date-time, nullable: true }
+        syncStatus:
+          type: string
+          enum: [awaiting_confirmation, pending_apply, applied, pending_detach, detached, failed]
+          description: Identity-service workflow state for downstream match/scorecard synchronization (ADR 0020).
+
+    CareerExport:
+      type: object
+      required: [id, format, status, requestedAt]
+      properties:
+        id: { type: string, format: uuid }
+        format: { type: string, enum: [json, csv] }
+        status: { type: string, enum: [pending, processing, ready, failed] }
+        downloadUrl: { type: string, format: uri, nullable: true }
+        downloadUrlExpiresAt: { type: [string, "null"], format: date-time }
+        requestedAt: { type: string, format: date-time }
+        readyAt: { type: string, format: date-time, nullable: true }
+
+    InternalPhoneResolution:
+      type: object
+      required: [resolution]
+      properties:
+        resolution:
+          type: string
+          enum: [existing_user, allow_placeholder, blocked]
+        userId:
+          type: [string, "null"]
+          format: uuid
+          description: Present only when resolution is `existing_user`.
+
+    DiscoveredPlaceholderMembership:
+      type: object
+      required: [matchId, squadMemberId, matchOccurredAt]
+      properties:
+        matchId: { type: string, format: uuid }
+        squadMemberId: { type: string, format: uuid }
+        matchOccurredAt:
+          type: string
+          format: date-time
+          description: Used by identity-service to evaluate the 24-month dormant-history rule.
+
+    Position:
+      type: object
+      required: [id, code, name, category]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: "ST" }
+        name: { type: string, example: "Striker" }
+        category: { type: string, enum: [goalkeeper, defender, midfielder, forward] }
+
+    Format:
+      type: object
+      required: [id, code, playersPerSide, defaultDurationMinutes, defaultPeriods, defaultFormationId]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: "6v6" }
+        playersPerSide: { type: integer }
+        defaultDurationMinutes: { type: integer }
+        defaultPeriods: { type: integer }
+        defaultFormationId: { type: [string, "null"], format: uuid }
+
+    Formation:
+      type: object
+      required: [id, formatId, name, slots]
+      properties:
+        id: { type: string, format: uuid }
+        formatId: { type: string, format: uuid }
+        name: { type: string, example: "2-3-1" }
+        slots:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [id, orderIndex, positionCode]
+            properties:
+              id: { type: string, format: uuid }
+              orderIndex: { type: integer, minimum: 0 }
+              positionCode: { type: string }
+
+    FormationLayoutSlot:
+      type: object
+      required: [orderIndex, positionId, squadMemberId, displayName, shirtNumber, isEmpty]
+      properties:
+        orderIndex: { type: integer, minimum: 0 }
+        positionId: { type: string, format: uuid }
+        squadMemberId: { type: string, format: uuid, description: "Empty string when isEmpty=true." }
+        displayName: { type: string, description: "Empty string when isEmpty=true." }
+        shirtNumber: { type: integer, minimum: 0, description: "Zero when isEmpty=true." }
+        isEmpty: { type: boolean }
+
+    FormationLayout:
+      type: object
+      required: [matchId, teamId, formatId, slots]
+      properties:
+        matchId: { type: string, format: uuid }
+        teamId: { type: string, format: uuid }
+        formatId: { type: string, format: uuid }
+        slots:
+          type: array
+          items: { $ref: "#/components/schemas/FormationLayoutSlot" }
+
+    ActionType:
+      type: object
+      required: [id, code, label, category, applicablePositionCategories, isContested, scoreImpact]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: "SHOT_ON_TARGET" }
+        label: { type: string, example: "Shot on target" }
+        category:
+          type: string
+          enum: [attacking, progressive, defensive, keeper, discipline, goal, substitution, other]
+        applicablePositionCategories:
+          type: array
+          minItems: 1
+          items: { type: string, enum: [goalkeeper, defender, midfielder, forward, any] }
+        isContested:
+          type: boolean
+          description: Whether this action prompts "against who?" opponent attribution.
+        scoreImpact:
+          type: string
+          enum: [none, increments_goal]
+
+    Venue:
+      type: object
+      description: >
+        Venue response. Coordinates are least-privilege fields: generic venue
+        search/detail responses return the approved approximate representation
+        or omit coordinates unless the server has an authorized match context
+        for the requesting host or confirmed participant. Coordinate presence
+        never means verified, booked, safe, or open. See ADR 0029 and the
+        Venue coordinate disclosure policy in the location design.
+      required: [id, name, city, coordinateAvailability, isVerifiedPartner, createdByUserId]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        address: { type: string, nullable: true }
+        city: { type: string, minLength: 1, maxLength: 80 }
+        latitude: { type: number, format: double, minimum: -90, maximum: 90, nullable: true }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180, nullable: true }
+        coordinateAvailability:
+          $ref: "#/components/schemas/CoordinateAvailability"
+        distanceKm:
+          type: number
+          format: double
+          nullable: true
+          readOnly: true
+          description: Distance from this request's search position; null for manual search or coordinate-free records.
+        source: { $ref: "#/components/schemas/LocationSource" }
+        precision: { $ref: "#/components/schemas/LocationPrecision" }
+        isVerifiedPartner:
+          type: boolean
+          description: Reserved for Phase 3 turf/venue partnerships; always false in Phase 0.
+        createdByUserId: { type: string, format: uuid }
+
+    VenueCreate:
+      type: object
+      required: [name, city]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        address: { type: string }
+        city: { type: string, minLength: 1, maxLength: 80 }
+        latitude: { type: number, format: double, minimum: -90, maximum: 90, nullable: true }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180, nullable: true }
+        source: { $ref: "#/components/schemas/LocationSource" }
+        precision: { $ref: "#/components/schemas/LocationPrecision" }
+      oneOf:
+        - required: [latitude, longitude]
+        - not:
+            anyOf:
+              - required: [latitude]
+              - required: [longitude]
+
+    MatchStatus:
+      type: string
+      description: >
+        Lifecycle state (ADR 0014, FR-4.9-01). Legal transitions: draft->open,
+        draft->cancelled, open->live, open->cancelled, open->forfeited,
+        live->completed, live->abandoned, live->forfeited. completed,
+        abandoned, forfeited, and cancelled are terminal. live->cancelled is
+        not legal: once a ball has been kicked the match either completed, was
+        abandoned, or was forfeited. Status is never set directly by a
+        client; it changes only as a side effect of a lifecycle command (a
+        `system` actor performs the stale-match sweep, FR-4.9-07).
+        **Breaking change** from the prior contract, which allowed
+        live->cancelled (NFR-05).
+      enum: [draft, open, live, completed, abandoned, forfeited, cancelled]
+
+    MatchResultType:
+      type: string
+      description: >
+        Whether the match produced a countable result (FR-4.9-04, FR-4.9-05).
+        decided: the scoreline stands. no_result: an abandoned match stopped
+        before 50% of scheduled regulation time elapsed — stats still count,
+        the scoreline does not. walkover: the match was forfeited — a result
+        stands for standings purposes but no individual statistics accrue.
+      enum: [decided, no_result, walkover]
+
+    AbandonReason:
+      type: string
+      description: Required for live->abandoned. reasonText is required when this is "other".
+      enum: [weather, injury, safety, venue, insufficient_players, stale, other]
+
+    LifecycleActor:
+      type: object
+      required: [type]
+      description: >
+        The actor recorded on a terminal lifecycle transition (FR-4.9-08).
+        `system` is reserved for the automatic stale-match sweep (FR-4.9-07)
+        and is never used for a user-initiated transition.
+      properties:
+        type: { type: string, enum: [user, system] }
+        userId: { type: string, format: uuid, nullable: true, description: "Present when type=user." }
+
+    InternalLiveStatusPush:
+      type: object
+      required: [status, actor]
+      description: >
+        Internal live-logging -> match-service lifecycle transition payload.
+        Supports user-driven live transitions and the automatic stale-match
+        sweep (ADR 0022).
+      properties:
+        status: { type: string, enum: [live, completed, abandoned, forfeited] }
+        actor: { $ref: "#/components/schemas/LifecycleActor" }
+        reasonCode:
+          type: [string, "null"]
+          description: An AbandonReason code, or a forfeit reason code, when applicable.
+        reasonText: { type: [string, "null"] }
+        forfeitingSide:
+          type: [string, "null"]
+          description: home or away; present only for a forfeited transition.
+        periodNumber: { type: [integer, "null"] }
+        matchClockSeconds: { type: [integer, "null"] }
+
+    MatchLifecycleTransition:
+      type: object
+      required: [id, matchId, fromStatus, toStatus, actor, occurredAt]
+      description: >
+        One append-only terminal-transition record (FR-4.9-08). Retrieved via
+        GET /matches/{matchId}/lifecycle-transitions.
+      properties:
+        id: { type: string, format: uuid }
+        matchId: { type: string, format: uuid }
+        fromStatus: { $ref: "#/components/schemas/MatchStatus" }
+        toStatus: { $ref: "#/components/schemas/MatchStatus" }
+        actor: { $ref: "#/components/schemas/LifecycleActor" }
+        reasonCode: { type: string, nullable: true, description: "An AbandonReason code, or a forfeit reason code, when applicable." }
+        reasonText: { type: string, nullable: true }
+        forfeitingSide:
+          type: string
+          nullable: true
+          description: "home or away; present only for a forfeited transition."
+        periodNumber: { type: integer, nullable: true }
+        matchClockSeconds: { type: integer, nullable: true }
+        occurredAt: { type: string, format: date-time }
+
+    MatchSide:
+      type: string
+      enum: [home, away]
+
+    PaymentType:
+      type: string
+      enum: [free, pay_at_venue, external_link]
+
+    MatchVisibility:
+      type: string
+      enum: [public, private]
+
+    LocationSource:
+      type: string
+      description: Provider-neutral provenance for a venue point; no provider IDs are retained.
+      enum: [user_entered, selected_place, approximate]
+
+    LocationPrecision:
+      type: string
+      description: Finite precision vocabulary for a venue point snapshot.
+      enum: [exact, approximate_area, city, unknown]
+
+    CoordinateAvailability:
+      type: string
+      description: Server-derived coordinate disclosure state for this response.
+      enum: [exact, approximate, unavailable]
+
+    VenueSnapshot:
+      type: object
+      description: >
+        Immutable venue snapshot stored on a match after a structured venue is
+        selected. Coordinates are optional and atomic; the match keeps the
+        snapshot even when the venue record later changes or is deleted.
+        Response coordinates are returned only to an authenticated host or
+        confirmed participant in an authorized match context. Before
+        acceptance and for unauthorized private viewers, latitude and
+        longitude are omitted or null and the response contains only the
+        approved approximate representation. A missing point is unavailable,
+        not an authorization error.
+      required: [name]
+      properties:
+        venueId: { type: string, format: uuid, nullable: true }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        city: { type: string, minLength: 1, maxLength: 80, nullable: true }
+        address: { type: string, nullable: true }
+        latitude: { type: number, format: double, minimum: -90, maximum: 90, nullable: true }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180, nullable: true }
+        coordinateAvailability:
+          $ref: "#/components/schemas/CoordinateAvailability"
+        source: { $ref: "#/components/schemas/LocationSource" }
+        precision: { $ref: "#/components/schemas/LocationPrecision" }
+        timezone: { type: string, nullable: true, description: "IANA timezone snapshot in effect for the match venue." }
+
+    MatchCreate:
+      type: object
+      description: >
+        Select an existing structured venue with venueId, or omit venueId and
+        provide a free-text venueName. venueName is required in the request for
+        compatibility with the fallback flow; when venueId is supplied,
+        match-service resolves the structured venue and stores its current name
+        as the match snapshot.
+      required: [formatId, venueName, durationMinutes, periods]
+      properties:
+        formatId: { type: string, format: uuid }
+        venueId: { type: string, format: uuid, nullable: true }
+        venueName: { type: string, minLength: 1, maxLength: 120, description: "Required fallback name; replaced by the selected structured venue name when venueId is set." }
+        venueSnapshot: { $ref: "#/components/schemas/VenueSnapshot" }
+        scheduledAt: { type: string, format: date-time }
+        durationMinutes: { type: integer, minimum: 10, maximum: 180 }
+        periods: { type: integer, minimum: 1, maximum: 4 }
+        costPerHead: { type: number, nullable: true }
+        currency: { type: string, default: "INR" }
+        paymentType: { $ref: "#/components/schemas/PaymentType" }
+        paymentLink: { type: string, format: uri, nullable: true }
+        visibility: { $ref: "#/components/schemas/MatchVisibility" }
+        autoAcceptJoinRequests: { type: boolean, default: false }
+
+    MatchUpdate:
+      type: object
+      description: >
+        Venue changes are allowed only while the match is draft or open. A
+        structured venue selection updates both venueId and the denormalized
+        venueName snapshot. Live and completed matches retain their snapshot.
+      properties:
+        venueId: { type: string, format: uuid, nullable: true }
+        venueName: { type: string, minLength: 1, maxLength: 120, description: "Required when venueId is omitted; ignored in favor of the selected venue name when venueId is set." }
+        venueSnapshot: { $ref: "#/components/schemas/VenueSnapshot" }
+        scheduledAt: { type: string, format: date-time }
+        durationMinutes: { type: integer, minimum: 10, maximum: 180 }
+        periods: { type: integer, minimum: 1, maximum: 4 }
+        costPerHead: { type: number }
+        paymentType: { $ref: "#/components/schemas/PaymentType" }
+        paymentLink: { type: string, format: uri }
+        visibility: { $ref: "#/components/schemas/MatchVisibility" }
+        autoAcceptJoinRequests: { type: boolean }
+
+    MatchTeam:
+      type: object
+      required: [id, matchId, side, name, squad]
+      properties:
+        id: { type: string, format: uuid }
+        matchId: { type: string, format: uuid }
+        side: { $ref: "#/components/schemas/MatchSide" }
+        name: { type: string }
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Links to a persistent Team resource (Phase 1+); null for one-off Phase 0 rosters.
+        squad:
+          type: array
+          items: { $ref: "#/components/schemas/SquadMember" }
+
+    SquadMember:
+      type: object
+      required: [id, matchTeamId, displayName, shirtNumber, positionCode, isStarting, status]
+      properties:
+        id: { type: string, format: uuid }
+        matchTeamId: { type: string, format: uuid }
+        userId: { type: string, format: uuid, nullable: true }
+        invitedPhoneNumber: { type: string, nullable: true }
+        displayName: { type: string }
+        shirtNumber: { type: integer, minimum: 1, maximum: 99 }
+        positionCode: { type: string }
+        isStarting: { type: boolean, default: true }
+        status: { type: string, enum: [active, removed] }
+
+    SquadMemberCreate:
+      type: object
+      required: [phoneNumber]
+      properties:
+        phoneNumber: { type: string, description: "Looked up against existing users; if unmatched, a placeholder squad member is created. Required for every squad addition." }
+        displayName: { type: string, description: "Required when phoneNumber does not match an existing user; ignored for an existing user." }
+        shirtNumber: { type: integer, minimum: 1, maximum: 99, description: "Optional; the service assigns the lowest available number from 1 to 99 when omitted." }
+        positionCode: { type: string, description: "Optional; the service assigns the next available position from the format formation when omitted." }
+        isStarting: { type: boolean, default: true }
+
+    SquadMemberUpdate:
+      type: object
+      properties:
+        shirtNumber: { type: integer, minimum: 1, maximum: 99 }
+        positionCode: { type: string }
+        isStarting: { type: boolean }
+
+    ClaimedSquadMember:
+      type: object
+      required: [matchId, id, matchTeamId, displayName, shirtNumber, positionCode, isStarting, status]
+      description: A SquadMember with its matchId included, for the internal claim backfill (MATCH-14).
+      properties:
+        matchId: { type: string, format: uuid }
+        id: { type: string, format: uuid }
+        matchTeamId: { type: string, format: uuid }
+        userId: { type: string, format: uuid, nullable: true }
+        displayName: { type: string }
+        shirtNumber: { type: integer, minimum: 1, maximum: 99 }
+        positionCode: { type: string }
+        isStarting: { type: boolean }
+        status: { type: string, enum: [active, removed] }
+
+    Match:
+      type: object
+      description: >
+        Match response with server-enforced venue disclosure. Hosts and
+        confirmed participants may receive exact snapshot coordinates. Pending
+        or unauthorized viewers receive only approved venue display fields and
+        approximate locality; private non-participants never receive exact
+        coordinates. Discovery distance is not persisted and does not affect
+        eligibility, acceptance, ranking, pricing, or attendance.
+      required: [id, hostUserId, format, venue, durationMinutes, periods, status, currency, paymentType, visibility, autoAcceptJoinRequests, teams, playersJoined, playersNeeded, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        hostUserId: { type: string, format: uuid }
+        format: { $ref: "#/components/schemas/Format" }
+        venue:
+          type: object
+          required: [venueId, name]
+          properties:
+            venueId: { type: string, format: uuid, nullable: true, description: "Nullable structured venue reference; historical match details use name even when this is absent or no longer resolvable." }
+            name: { type: string, description: "Immutable match venue_name snapshot." }
+        venueSnapshot: { $ref: "#/components/schemas/VenueSnapshot" }
+        distanceKm: { type: number, format: double, nullable: true, readOnly: true, description: Distance from this request's search position; null for manual search or coordinate-free matches. }
+        scheduledAt: { type: string, format: date-time }
+        durationMinutes: { type: integer }
+        periods: { type: integer }
+        status: { $ref: "#/components/schemas/MatchStatus" }
+        resultType:
+          type: string
+          nullable: true
+          description: "Null until the match reaches a terminal state; see MatchResultType (FR-4.9-04, FR-4.9-05)."
+        forfeitingSide: { type: string, nullable: true, description: "Present only when status=forfeited." }
+        endedReason: { type: string, nullable: true, description: "An AbandonReason code, or a forfeit reason code, when status is abandoned or forfeited." }
+        endedReasonText: { type: string, nullable: true }
+        endedAtPeriod: { type: integer, nullable: true }
+        endedAtClockSeconds: { type: integer, nullable: true }
+        costPerHead: { type: number, nullable: true }
+        currency: { type: string }
+        paymentType: { $ref: "#/components/schemas/PaymentType" }
+        paymentLink: { type: string, nullable: true }
+        visibility: { $ref: "#/components/schemas/MatchVisibility" }
+        autoAcceptJoinRequests: { type: boolean }
+        teams:
+          type: array
+          items: { $ref: "#/components/schemas/MatchTeam" }
+        playersJoined: { type: integer }
+        playersNeeded: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    MatchListPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Match" }
+        nextCursor: { type: string, nullable: true }
+
+    JoinRequestType:
+      type: string
+      enum: [join_open, direct_challenge]
+
+    JoinRequestStatus:
+      type: string
+      enum: [pending, accepted, declined, cancelled]
+
+    JoinRequestCreate:
+      type: object
+      required: [type]
+      properties:
+        type: { $ref: "#/components/schemas/JoinRequestType" }
+        targetSide:
+          type: string
+          enum: [home, away]
+          nullable: true
+        targetUserId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required when type=direct_challenge and challenging a specific player/team captain.
+        message: { type: string, nullable: true }
+
+    JoinRequest:
+      type: object
+      required: [id, matchId, type, requesterUserId, status, createdAt]
+      description: >
+        Location-neutral join request. It never contains requester coordinates,
+        discovery distance, device location, or venue coordinates. Any venue
+        detail returned alongside a confirmation follows the caller's
+        server-side match authorization.
+      properties:
+        id: { type: string, format: uuid }
+        matchId: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/JoinRequestType" }
+        requesterUserId: { type: string, format: uuid }
+        targetSide: { type: string, nullable: true }
+        targetUserId: { type: string, format: uuid, nullable: true }
+        status: { $ref: "#/components/schemas/JoinRequestStatus" }
+        message: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        respondedAt: { type: string, format: date-time, nullable: true }
+
+    LoggerRole:
+      type: string
+      enum: [host, referee, scorer]
+
+    MatchLogger:
+      type: object
+      required: [id, matchId, userId, role, isActive, assignedAt]
+      properties:
+        id: { type: string, format: uuid }
+        matchId: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        role: { $ref: "#/components/schemas/LoggerRole" }
+        isActive: { type: boolean }
+        assignedAt: { type: string, format: date-time }
+
+    MatchLiveState:
+      type: object
+      description: >
+        Operational live projection. At most one active MatchLogger exists for
+        a match; concurrent start or replacement attempts return 409. Writes
+        are conditional on the current version.
+      required: [matchId, status, scoreHome, scoreAway, currentPeriod, clockSeconds, stoppageSeconds, clockRunning, version, updatedAt]
+      properties:
+        matchId: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/MatchStatus" }
+        scoreHome: { type: integer }
+        scoreAway: { type: integer }
+        currentPeriod: { type: integer }
+        clockSeconds: { type: integer, description: "Elapsed match-clock seconds, current period." }
+        stoppageSeconds:
+          type: integer
+          description: >
+            Added time recorded for the current period (GAP-10); the clock
+            counts up and stoppage is additive, never a rewind.
+        clockRunning: { type: boolean }
+        version: { type: integer, format: int64, minimum: 0, description: Monotonic live-state version. }
+        activeLogger:
+          type: object
+          nullable: true
+          properties:
+            userId: { type: string, format: uuid }
+            role: { $ref: "#/components/schemas/LoggerRole" }
+        updatedAt: { type: string, format: date-time }
+
+    GoalDetail:
+      type: string
+      enum: [strong_foot, weak_foot, header, volley]
+
+    MatchEventCreate:
+      type: object
+      required: [id, clientSequence, matchTeamId, squadMemberId, actionTypeCode, periodNumber, matchClockSeconds]
+      description: >
+        id and clientSequence support offline-first capture (ADR 0015): the
+        client allocates id (a time-ordered UUIDv7) at the moment of the tap,
+        which doubles as the idempotency key, and clientSequence breaks ties
+        within the same (periodNumber, matchClockSeconds) so a late-syncing
+        batch still lands in the order it occurred (FR-4.12-03). The
+        Idempotency-Key header, when also present, must equal id.
+      properties:
+        id: { type: string, format: uuid, description: "Client-allocated UUIDv7." }
+        clientSequence: { type: integer, minimum: 0 }
+        matchTeamId: { type: string, format: uuid }
+        squadMemberId: { type: string, format: uuid }
+        actionTypeCode: { type: string, minLength: 1, example: "GOAL" }
+        opponentSquadMemberId:
+          type: string
+          format: uuid
+          nullable: true
+          description: "\"Against who?\" attribution for contested actions; omit to skip."
+        goalDetail: { $ref: "#/components/schemas/GoalDetail" }
+        periodNumber: { type: integer, minimum: 1, maximum: 4 }
+        matchClockSeconds: { type: integer, minimum: 0 }
+        duringStoppage: { type: boolean, default: false, description: "GAP-10: set when logged while the clock is paused for stoppage." }
+
+    MatchEvent:
+      type: object
+      required: [id, clientSequence, matchId, matchTeamId, squadMemberId, actionTypeCode, periodNumber, matchClockSeconds, loggedByUserId, isUndone, isCorrection, createdAt]
+      properties:
+        id: { type: string, format: uuid, description: "Client-allocated, time-ordered UUIDv7 (ADR 0015); doubles as the idempotency key." }
+        clientSequence: { type: integer, minimum: 0, description: "Tie-breaker within (periodNumber, matchClockSeconds) — the ledger ordering key (FR-4.12-03)." }
+        matchId: { type: string, format: uuid }
+        matchTeamId: { type: string, format: uuid }
+        squadMemberId: { type: string, format: uuid }
+        actionTypeCode: { type: string }
+        opponentSquadMemberId: { type: string, format: uuid, nullable: true }
+        goalDetail: { $ref: "#/components/schemas/GoalDetail" }
+        periodNumber: { type: integer, minimum: 1, maximum: 4 }
+        matchClockSeconds: { type: integer, minimum: 0 }
+        duringStoppage: { type: boolean }
+        loggedByUserId: { type: string, format: uuid }
+        isUndone: { type: boolean }
+        isCorrection:
+          type: boolean
+          description: True for a post-match compensating event appended via POST /matches/{matchId}/corrections (ADR 0017).
+        correctsEventId: { type: string, nullable: true }
+        correctionReason: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    SubstitutionCreate:
+      type: object
+      required: [id, clientSequence, matchTeamId, playerOutSquadMemberId, playerInSquadMemberId, periodNumber, matchClockSeconds]
+      description: >
+        id and clientSequence follow the same offline-first rules as
+        MatchEventCreate (ADR 0015); the Idempotency-Key header, when also
+        present, must equal id.
+      properties:
+        id: { type: string, format: uuid, description: "Client-allocated UUIDv7." }
+        clientSequence: { type: integer, minimum: 0 }
+        matchTeamId: { type: string, format: uuid }
+        playerOutSquadMemberId: { type: string, format: uuid }
+        playerInSquadMemberId: { type: string, format: uuid }
+        periodNumber: { type: integer, minimum: 1, maximum: 4 }
+        matchClockSeconds: { type: integer, minimum: 0 }
+        duringStoppage: { type: boolean, default: false }
+
+    Substitution:
+      type: object
+      required: [id, clientSequence, matchId, matchTeamId, playerOutSquadMemberId, playerInSquadMemberId, periodNumber, matchClockSeconds, loggedByUserId, createdAt, eventVersion]
+      properties:
+        id: { type: string, format: uuid, description: "Client-allocated, time-ordered UUIDv7 (ADR 0015)." }
+        clientSequence: { type: integer, minimum: 0 }
+        matchId: { type: string, format: uuid }
+        matchTeamId: { type: string, format: uuid }
+        playerOutSquadMemberId: { type: string, format: uuid }
+        playerInSquadMemberId: { type: string, format: uuid }
+        periodNumber: { type: integer }
+        matchClockSeconds: { type: integer }
+        duringStoppage: { type: boolean }
+        loggedByUserId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        eventVersion: { type: integer, minimum: 1, description: "Immutable substitution payload/schema version." }
+
+    RecoveryBundleCreate:
+      type: object
+      required: [deviceId, fencedAtVersion, events, substitutions]
+      properties:
+        deviceId: { type: string }
+        fencedAtVersion: { type: integer, format: int64, description: "The live-state version at which this device was fenced." }
+        events:
+          type: array
+          items: { $ref: "#/components/schemas/MatchEventCreate" }
+        substitutions:
+          type: array
+          items: { $ref: "#/components/schemas/SubstitutionCreate" }
+
+    RecoveryBundle:
+      type: object
+      required: [id, matchId, deviceId, fencedAtVersion, status, submittedAt]
+      properties:
+        id: { type: string, format: uuid }
+        matchId: { type: string, format: uuid }
+        deviceId: { type: string }
+        fencedAtVersion: { type: integer, format: int64 }
+        status: { type: string, enum: [pending, accepted, rejected] }
+        eventCount: { type: integer }
+        substitutionCount: { type: integer }
+        submittedAt: { type: string, format: date-time }
+        resolvedAt: { type: string, format: date-time, nullable: true }
+        resolvedByUserId: { type: string, format: uuid, nullable: true }
+
+    PlayerMatchStat:
+      type: object
+      required: [squadMemberId, userId, displayName, positionCode, goals, assists, yellowCards, redCards, actionTally, opponentAttributedTally]
+      properties:
+        squadMemberId: { type: string, format: uuid }
+        userId: { type: string, format: uuid, nullable: true }
+        displayName: { type: string }
+        positionCode: { type: string }
+        goals: { type: integer }
+        assists: { type: integer }
+        yellowCards: { type: integer }
+        redCards: { type: integer }
+        actionTally:
+          type: object
+          additionalProperties: { type: integer }
+          description: "actionTypeCode -> count, from actions this player performed. Excludes opponent-attributed entries."
+        opponentAttributedTally:
+          type: object
+          additionalProperties: { type: integer }
+          description: >
+            actionTypeCode -> count, derived and mirrored from a contested
+            action logged against this player by the opposing side
+            (FR-4.17-01). Displayed with provenance (the match and its
+            logger); never fed into the Phase 1 Player Rating (FR-4.17-02).
+
+    Scorecard:
+      type: object
+      required: [id, matchId, status, resultType, finalScoreHome, finalScoreAway, correctionCount, isCorrected, playerStats, generatedAt]
+      description: >
+        Derived read model for the match. The scorecard is re-projected from the
+        append-only ledger and never edited in place. Corrections append a
+        compensating event, increment `correctionCount`, and flip `isCorrected`
+        while the scorecard remains within the 72-hour window; after that the
+        scorecard is frozen and only the dispute flow may append further change.
+        Scorecards contain no exact venue coordinates, device location, or
+        location history.
+      properties:
+        id: { type: string, format: uuid }
+        matchId: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [draft, final, frozen]
+          description: >
+            final is set at completion; frozen 72 hours later (ADR 0017),
+            after which the scorecard is read-only for every actor including
+            the host. Only frozen scorecards feed the Phase 1 rating.
+        resultType: { $ref: "#/components/schemas/MatchResultType" }
+        finalScoreHome: { type: integer }
+        finalScoreAway: { type: integer }
+        manOfTheMatchSquadMemberId: { type: string, format: uuid, nullable: true }
+        finalizedAt: { type: string, format: date-time, nullable: true }
+        frozenAt: { type: string, format: date-time, nullable: true }
+        correctionCount:
+          type: integer
+          minimum: 0
+          description: Visible "corrected" marker count (FR-4.16-03). Silent correction is prohibited.
+        isCorrected:
+          type: boolean
+          description: True when the scorecard has at least one append-only correction recorded (FR-4.16-03).
+        playerStats:
+          type: array
+          items: { $ref: "#/components/schemas/PlayerMatchStat" }
+        generatedAt: { type: string, format: date-time }
+
+    CorrectionCreate:
+      type: object
+      required: [reason, matchTeamId, squadMemberId, actionTypeCode, periodNumber, matchClockSeconds]
+      description: >
+        Shaped like MatchEventCreate because a correction is itself an
+        append-only compensating ledger event (isCorrection=true); it never
+        edits a total in place. `correctsEventId` optionally names the event
+        being compensated for within the 72-hour window defined in ADR 0017.
+      properties:
+        reason: { type: string, minLength: 1 }
+        correctsEventId: { type: string, nullable: true }
+        matchTeamId: { type: string, format: uuid }
+        squadMemberId: { type: string, format: uuid }
+        actionTypeCode: { type: string }
+        opponentSquadMemberId: { type: string, format: uuid, nullable: true }
+        goalDetail: { $ref: "#/components/schemas/GoalDetail" }
+        periodNumber: { type: integer, minimum: 1, maximum: 4 }
+        matchClockSeconds: { type: integer, minimum: 0 }
+
+    Correction:
+      type: object
+      required: [id, matchId, reason, actorUserId, actionTypeCode, createdAt]
+      description: >
+        An audit entry created by appending a compensating event to the match
+        ledger. The row remains immutable and is visible to participants as part
+        of the scorecard correction trail.
+      properties:
+        id: { type: string }
+        matchId: { type: string, format: uuid }
+        reason: { type: string }
+        correctsEventId: { type: string, nullable: true }
+        actorUserId: { type: string, format: uuid }
+        matchTeamId: { type: string, format: uuid }
+        squadMemberId: { type: string, format: uuid }
+        actionTypeCode: { type: string }
+        opponentSquadMemberId: { type: string, format: uuid, nullable: true }
+        periodNumber: { type: integer }
+        matchClockSeconds: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    PlayerCareerStats:
+      type: object
+      required: [userId, matchesPlayed, goals, assists, mvps, perPositionActionSummary, updatedAt]
+      properties:
+        userId: { type: string, format: uuid }
+        matchesPlayed: { type: integer }
+        goals: { type: integer }
+        assists: { type: integer }
+        mvps: { type: integer }
+        perPositionActionSummary:
+          type: object
+          additionalProperties: { type: integer }
+        lastMatchAt: { type: string, format: date-time, nullable: true }
+        updatedAt: { type: string, format: date-time }
+
+    PlayerMatchStats:
+      type: object
+      required: [matchId, squadMemberId, positionId, goals, assists, yellowCards, redCards, actionTally, updatedAt]
+      properties:
+        matchId: { type: string, format: uuid }
+        squadMemberId: { type: string, format: uuid }
+        userId: { type: string, format: uuid, nullable: true }
+        positionId: { type: string, format: uuid }
+        goals: { type: integer }
+        assists: { type: integer }
+        yellowCards: { type: integer }
+        redCards: { type: integer }
+        actionTally:
+          type: object
+          additionalProperties: { type: integer }
+        updatedAt: { type: string, format: date-time }
+
+    ScorecardCareerExport:
+      type: object
+      required: [careerStats, playerMatchStats, milestones]
+      properties:
+        careerStats: { $ref: "#/components/schemas/PlayerCareerStats" }
+        playerMatchStats:
+          type: array
+          items: { $ref: "#/components/schemas/PlayerMatchStats" }
+        milestones:
+          type: array
+          items: { $ref: "#/components/schemas/Milestone" }
+
+    ShareableCard:
+      type: object
+      required: [id, entityType, entityId, imageUrl, aspectRatio, templateVersion, createdAt]
+      description: >
+        Public-share metadata for a server-rendered card. Card content is
+        location-safe: it never contains exact venue coordinates, a
+        coordinate-bearing map URL, device location, or a phone number.
+      properties:
+        id: { type: string, format: uuid }
+        entityType: { type: string, enum: [scorecard, profile, milestone] }
+        entityId: { type: string, format: uuid }
+        imageUrl: { type: string, format: uri }
+        aspectRatio: { type: string, example: "9:16" }
+        templateVersion:
+          type: integer
+          minimum: 1
+          description: Versioned server-rendered template (FR-4.15-01); regenerated when the underlying scorecard is corrected (FR-4.15-06).
+        isPartialMatch:
+          type: boolean
+          description: >
+            True for a scorecard from an abandoned match — the card is
+            explicitly labelled "Abandoned — partial" and never renders a
+            winning scoreline for a no_result match (FR-4.15-05).
+        createdAt: { type: string, format: date-time }
+
+    Milestone:
+      type: object
+      required: [id, userId, type, achievedAt, shareCard]
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        type: { type: string, example: "TENTH_MATCH" }
+        matchId: { type: string, format: uuid, nullable: true }
+        achievedAt: { type: string, format: date-time }
+        shareCard: { $ref: "#/components/schemas/ShareableCard" }

@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowRight, KeyRound, Mail, Phone, ShieldCheck } from "lucide-react";
+import { ArrowRight, KeyRound, Mail } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { loginWithEmail, registerWithEmail } from "@/lib/api";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -10,23 +11,42 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Play. Get scored. Get known. Sign in to footArena with your phone number or email and start building your football story, one match at a time.",
+          "Play. Get scored. Get known. Sign in to footArena and start building your football story, one match at a time.",
       },
       { property: "og:title", content: "Sign in — footArena" },
       {
         property: "og:description",
-        content:
-          "Play. Get scored. Get known, your football story, one match at a time.",
+        content: "Play. Get scored. Get known, your football story, one match at a time.",
       },
     ],
   }),
   component: LoginScreen,
 });
 
-type Method = "phone" | "email";
-
 function LoginScreen() {
-  const [method, setMethod] = useState<Method>("phone");
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+    try {
+      const tokens = isRegistering
+        ? await registerWithEmail(email, password)
+        : await loginWithEmail(email, password);
+      localStorage.setItem("footArena.accessToken", tokens.accessToken);
+      localStorage.setItem("footArena.refreshToken", tokens.refreshToken);
+      window.location.href = "/home";
+    } catch {
+      setError("We could not sign you in. Check your details and try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <AppShell className="justify-between px-5 pt-14 pb-8">
@@ -41,119 +61,75 @@ function LoginScreen() {
           </span>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           <h1 className="font-display text-[42px] leading-[0.95] font-700 uppercase">
-            Play.
+            Your football
             <br />
-            Get scored.
-            <br />
-            <span className="text-primary">Get known.</span>
+            <span className="text-primary">story.</span>
           </h1>
           <p className="max-w-[19rem] text-sm leading-relaxed text-muted-foreground">
-            Your football story, one match at a time.
+            Play, get scored, and keep every match in one place.
           </p>
         </div>
       </header>
 
       {/* auth panel */}
       <section className="panel mt-8 rounded-3xl p-5">
-        <div className="panel-2 mb-4 grid grid-cols-2 gap-1 rounded-2xl p-1">
-          <MethodTab
-            active={method === "phone"}
-            onClick={() => setMethod("phone")}
-            icon={<Phone className="size-4" strokeWidth={2.2} />}
-            label="Phone OTP"
-          />
-          <MethodTab
-            active={method === "email"}
-            onClick={() => setMethod("email")}
-            icon={<Mail className="size-4" strokeWidth={2.2} />}
-            label="Email"
-          />
-        </div>
-
-        <form className="space-y-3" onSubmit={(e) => e.preventDefault()}>
-          {method === "phone" ? (
-            <Field label="Mobile number">
-              <span className="tnum shrink-0 border-r border-border pr-2.5 text-sm font-600 text-foreground/80">
-                +91
-              </span>
-              <input
-                type="tel"
-                inputMode="numeric"
-                placeholder="98765 43210"
-                className="tnum w-full bg-transparent text-sm font-500 tracking-wide outline-none placeholder:text-muted-foreground/70"
-              />
-            </Field>
-          ) : (
-            <>
-              <Field label="Email">
-                <input
-                  type="email"
-                  placeholder="you@club.com"
-                  className="w-full bg-transparent text-sm font-500 outline-none placeholder:text-muted-foreground/70"
-                />
-              </Field>
-              <Field label="Password">
-                <KeyRound className="size-4 shrink-0 text-muted-foreground" strokeWidth={2.2} />
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full bg-transparent text-sm font-500 outline-none placeholder:text-muted-foreground/70"
-                />
-              </Field>
-            </>
+        <form className="space-y-3" onSubmit={handleSubmit}>
+          <Field label="Email">
+            <Mail className="size-4 shrink-0 text-muted-foreground" strokeWidth={2.2} />
+            <input
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              type="email"
+              placeholder="you@club.com"
+              className="w-full bg-transparent text-sm font-500 outline-none placeholder:text-muted-foreground/70"
+            />
+          </Field>
+          <Field label="Password">
+            <KeyRound className="size-4 shrink-0 text-muted-foreground" strokeWidth={2.2} />
+            <input
+              required
+              minLength={8}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              type="password"
+              placeholder="8+ characters"
+              className="w-full bg-transparent text-sm font-500 outline-none placeholder:text-muted-foreground/70"
+            />
+          </Field>
+          {error && (
+            <p role="alert" className="text-xs text-destructive">
+              {error}
+            </p>
           )}
 
-          <Link
-            to="/home"
-            className="volt-fill flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-700 tracking-wide uppercase transition-transform active:scale-[0.98]"
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="volt-fill flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-700 tracking-wide uppercase transition-transform active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
           >
-            {method === "phone" ? "Send OTP" : "Log in"}
+            {isSubmitting ? "Connecting..." : isRegistering ? "Create account" : "Log in"}
             <ArrowRight className="size-4" strokeWidth={2.6} />
-          </Link>
+          </button>
         </form>
 
-        <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
-          <ShieldCheck className="size-3.5 text-pitch" strokeWidth={2.4} />
-          One account. Player, referee or host — switch anytime.
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsRegistering((value) => !value)}
+          className="mt-4 w-full text-center text-[11px] font-600 text-primary"
+        >
+          {isRegistering
+            ? "Already have an account? Log in"
+            : "New here? Create your player profile"}
+        </button>
       </section>
 
       <footer className="mt-6 text-center text-[11px] leading-relaxed text-muted-foreground/80">
-        New here?{" "}
-        <Link to="/home" className="font-600 text-primary underline-offset-4 hover:underline">
-          Create your player profile
-        </Link>
+        One account for your player, referee, and host roles.
       </footer>
     </AppShell>
-  );
-}
-
-function MethodTab({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex h-10 items-center justify-center gap-2 rounded-xl text-xs font-700 tracking-wide uppercase transition-colors ${
-        active
-          ? "volt-fill"
-          : "text-muted-foreground hover:text-foreground"
-      }`}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }
 

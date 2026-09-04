@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
   Bell,
   CalendarDays,
@@ -6,7 +7,6 @@ import {
   ClipboardList,
   Clock3,
   Compass,
-  Flame,
   Goal,
   Handshake,
   Home,
@@ -15,13 +15,12 @@ import {
   Search,
   Share2,
   ShieldCheck,
-  Target,
   Trophy,
   UserRound,
-  Users,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import pitchTop from "@/assets/pitch-top.jpg";
+import { getCurrentUser, listMatches, type Match, type User } from "@/lib/api";
 
 export const Route = createFileRoute("/home")({
   head: () => ({
@@ -35,8 +34,7 @@ export const Route = createFileRoute("/home")({
       { property: "og:title", content: "Home — footArena" },
       {
         property: "og:description",
-        content:
-          "Your next match, matches near you and your latest scorecard, all in one place.",
+        content: "Your next match, matches near you and your latest scorecard, all in one place.",
       },
     ],
   }),
@@ -77,19 +75,60 @@ const nearby = [
 ];
 
 function HomeScreen() {
+  const [user, setUser] = useState<User | null>(null);
+  const [matches, setMatches] = useState<Match[]>([]);
+
+  useEffect(() => {
+    const accessToken = localStorage.getItem("footArena.accessToken");
+    if (!accessToken) return;
+
+    Promise.all([getCurrentUser(accessToken), listMatches(accessToken)])
+      .then(([currentUser, matchPage]) => {
+        setUser(currentUser);
+        setMatches(matchPage.items);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const displayName = user?.displayName ?? "Your profile";
+  const initials = displayName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  const matchCards = matches.length
+    ? matches.map((match) => ({
+        title: match.teams.map((team) => team.name).join(" vs "),
+        format: match.format.code,
+        time: new Intl.DateTimeFormat("en-IN", {
+          weekday: "short",
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(new Date(match.scheduledAt)),
+        venue: match.venue.name,
+        km: "",
+        joined: match.playersJoined,
+        needed: match.playersNeeded,
+        price: match.costPerHead ? `₹${match.costPerHead}` : "Free",
+      }))
+    : nearby;
+
   return (
     <AppShell className="pb-28">
       {/* header */}
       <header className="flex items-center justify-between px-5 pt-12 pb-4">
         <div className="flex items-center gap-3">
           <span className="pitch-fill flex size-11 items-center justify-center rounded-2xl border border-border font-display text-base font-700">
-            AG
+            {initials || "FA"}
           </span>
           <div className="leading-tight">
-            <p className="text-[15px] font-700">Anshu Gupta</p>
+            <p className="text-[15px] font-700">{displayName}</p>
             <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
               <MapPin className="size-3" strokeWidth={2.4} />
-              Mumbai · Powai
+              {user?.city
+                ? `${user.city}${user.area ? ` · ${user.area}` : ""}`
+                : "Set your location"}
             </p>
           </div>
         </div>
@@ -120,11 +159,7 @@ function HomeScreen() {
               value="09"
               label="Assists"
             />
-            <Stat
-              icon={<Trophy className="size-3.5" strokeWidth={2.4} />}
-              value="04"
-              label="MVP"
-            />
+            <Stat icon={<Trophy className="size-3.5" strokeWidth={2.4} />} value="04" label="MVP" />
           </div>
         </section>
 
@@ -177,19 +212,11 @@ function HomeScreen() {
           </div>
         </section>
 
-        {/* quick actions */}
-        <section className="grid grid-cols-4 gap-2">
-          <Action icon={<Plus className="size-[18px]" strokeWidth={2.4} />} label="Host" primary />
-          <Action icon={<Compass className="size-[18px]" strokeWidth={2.2} />} label="Find" />
-          <Action icon={<Users className="size-[18px]" strokeWidth={2.2} />} label="Squad" />
-          <Action icon={<Target className="size-[18px]" strokeWidth={2.2} />} label="Stats" />
-        </section>
-
         {/* nearby matches */}
         <section className="space-y-2">
           <SectionHead title="Matches near you" action="See all" />
           <div className="space-y-2">
-            {nearby.map((m) => (
+            {matchCards.map((m) => (
               <article
                 key={m.title}
                 className="panel flex items-center gap-3 rounded-2xl p-3 transition-colors hover:bg-surface-2"
@@ -256,39 +283,19 @@ function HomeScreen() {
             </div>
           </article>
         </section>
-
-        {/* form */}
-        <section className="panel flex items-center justify-between rounded-2xl px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Flame className="size-4 text-primary" strokeWidth={2.4} />
-            <span className="text-[12px] font-600">Last 5 matches</span>
-          </div>
-          <div className="flex gap-1.5">
-            {["W", "W", "D", "L", "W"].map((r, i) => (
-              <span
-                key={i}
-                className={`flex size-6 items-center justify-center rounded-md text-[10px] font-700 ${
-                  r === "W"
-                    ? "volt-fill"
-                    : r === "D"
-                      ? "panel-2 text-foreground"
-                      : "bg-destructive/85 text-destructive-foreground"
-                }`}
-              >
-                {r}
-              </span>
-            ))}
-          </div>
-        </section>
       </main>
 
       {/* tab bar */}
       <nav className="panel fixed bottom-4 left-1/2 z-20 flex w-[calc(100%-2.5rem)] max-w-[390px] -translate-x-1/2 items-center justify-between rounded-2xl px-2 py-2">
         <Tab icon={<Home className="size-[18px]" strokeWidth={2.4} />} label="Home" active />
         <Tab icon={<Compass className="size-[18px]" strokeWidth={2.2} />} label="Discover" />
-        <button className="volt-fill flex size-11 items-center justify-center rounded-xl active:scale-95">
+        <Link
+          to="/host"
+          aria-label="Host a match"
+          className="volt-fill flex size-11 items-center justify-center rounded-xl active:scale-95"
+        >
           <Plus className="size-5" strokeWidth={2.8} />
-        </button>
+        </Link>
         <Tab icon={<ClipboardList className="size-[18px]" strokeWidth={2.2} />} label="Matches" />
         <Link to="/" className="contents">
           <Tab icon={<UserRound className="size-[18px]" strokeWidth={2.2} />} label="Profile" />
@@ -320,42 +327,13 @@ function IconButton({
   );
 }
 
-function Stat({
-  icon,
-  value,
-  label,
-}: {
-  icon: React.ReactNode;
-  value: string;
-  label: string;
-}) {
+function Stat({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-0.5">
       <span className="text-pitch">{icon}</span>
       <span className="tnum text-[15px] leading-none font-700">{value}</span>
       <span className="text-[9px] tracking-[0.1em] text-muted-foreground uppercase">{label}</span>
     </div>
-  );
-}
-
-function Action({
-  icon,
-  label,
-  primary,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  primary?: boolean;
-}) {
-  return (
-    <button
-      className={`flex flex-col items-center gap-1.5 rounded-2xl py-3 active:scale-95 ${
-        primary ? "volt-fill" : "panel"
-      }`}
-    >
-      {icon}
-      <span className="text-[10px] font-700 tracking-[0.1em] uppercase">{label}</span>
-    </button>
   );
 }
 
@@ -392,15 +370,7 @@ function Chip({
   );
 }
 
-function Tab({
-  icon,
-  label,
-  active,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  active?: boolean;
-}) {
+function Tab({ icon, label, active }: { icon: React.ReactNode; label: string; active?: boolean }) {
   return (
     <button
       className={`flex w-14 flex-col items-center gap-1 py-1 ${
