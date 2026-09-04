@@ -2,10 +2,8 @@
 @source "../src";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
 /*
- * footArena design system — a stadium-at-dusk palette with a warm daylight mode.
+ * footArena design system — a warm daylight palette.
  * Lime and pitch green carry the football identity; amber and coral provide
  * distinct status signals without turning the interface into a rainbow.
  */
@@ -49,52 +47,6 @@
 :root {
   --radius: 1rem;
 
-  --background: oklch(0.29 0.018 165);
-  --foreground: oklch(0.97 0.008 130);
-
-  --surface: oklch(0.35 0.02 165 / 82%);
-  --surface-2: oklch(0.4 0.022 165 / 76%);
-
-  --card: oklch(0.35 0.02 165 / 82%);
-  --card-foreground: oklch(0.97 0.008 130);
-  --popover: oklch(0.32 0.02 165);
-  --popover-foreground: oklch(0.97 0.008 130);
-
-  /* muted chartreuse — the single brand accent */
-  --primary: oklch(0.82 0.11 122);
-  --primary-foreground: oklch(0.25 0.055 130);
-
-  /* pitch green — support accent for anything "on the field" */
-  --pitch: oklch(0.55 0.13 155);
-  --pitch-foreground: oklch(0.98 0.01 130);
-
-  --secondary: oklch(0.41 0.024 165 / 80%);
-  --secondary-foreground: oklch(0.96 0.008 130);
-  --muted: oklch(0.41 0.02 165 / 70%);
-  --muted-foreground: oklch(0.83 0.015 150);
-  --accent: oklch(0.45 0.03 160 / 80%);
-  --accent-foreground: oklch(0.97 0.008 130);
-
-  --destructive: oklch(0.63 0.19 27);
-  --destructive-foreground: oklch(0.98 0.01 130);
-
-  --border: oklch(0.98 0.01 140 / 12%);
-  --input: oklch(0.98 0.01 140 / 14%);
-  --ring: oklch(0.82 0.11 122 / 55%);
-
-  --gradient-volt: linear-gradient(135deg, oklch(0.85 0.11 128), oklch(0.77 0.12 118));
-  --gradient-pitch: linear-gradient(150deg, oklch(0.54 0.12 158), oklch(0.36 0.06 165));
-  --gradient-veil: linear-gradient(
-    180deg,
-    oklch(0.24 0.02 165 / 22%) 0%,
-    oklch(0.24 0.02 165 / 38%) 55%,
-    oklch(0.22 0.018 165 / 56%) 100%
-  );
-  --shadow-lift: 0 18px 40px -22px oklch(0.05 0.02 165 / 90%);
-  --shadow-volt: 0 14px 34px -16px oklch(0.82 0.11 122 / 32%);
-}
-
-.light {
   --background: oklch(0.96 0.018 112);
   --foreground: oklch(0.17 0.035 158);
 
@@ -106,8 +58,11 @@
   --popover: oklch(0.99 0.012 100);
   --popover-foreground: oklch(0.17 0.035 158);
 
+  /* muted chartreuse — the single brand accent */
   --primary: oklch(0.56 0.15 125);
   --primary-foreground: oklch(0.98 0.02 105);
+
+  /* pitch green — support accent for anything "on the field" */
   --pitch: oklch(0.42 0.13 154);
   --pitch-foreground: oklch(0.99 0.01 110);
 
@@ -118,11 +73,12 @@
   --accent: oklch(0.86 0.055 92 / 90%);
   --accent-foreground: oklch(0.25 0.04 155);
 
+  --destructive: oklch(0.63 0.19 27);
+  --destructive-foreground: oklch(0.98 0.01 110);
+
   --border: oklch(0.3 0.055 150 / 14%);
   --input: oklch(0.3 0.055 150 / 18%);
   --ring: oklch(0.56 0.15 125 / 50%);
-  --warning: oklch(0.68 0.16 72);
-  --info: oklch(0.56 0.13 220);
 
   --gradient-volt: linear-gradient(135deg, oklch(0.64 0.16 126), oklch(0.53 0.14 112));
   --gradient-pitch: linear-gradient(150deg, oklch(0.47 0.14 155), oklch(0.32 0.09 158));
@@ -131,35 +87,27 @@
     transparent 0%,
     transparent 100%
   );
+  --warning: oklch(0.68 0.16 72);
+  --info: oklch(0.56 0.13 220);
   --shadow-lift: 0 18px 40px -22px oklch(0.2 0.04 150 / 30%);
   --shadow-volt: 0 14px 34px -16px oklch(0.48 0.13 125 / 28%);
 }
 
-.light .stadium-backdrop {
-  opacity: 1;
-  filter: none;
-}
-
-.light .backdrop-text {
-  color: #f5f8f0;
-  text-shadow: 0 1px 3px rgba(8, 24, 16, 0.85);
-}
-
-.light .grid-lines {
-  display: none;
-}
-
-.light .screen-content {
-  color: #f5f8f0;
-}
-
-.light .screen-content .panel,
-.light .screen-content .panel-2 {
+.backdrop-text {
   color: var(--foreground);
 }
 
-.light .pitch-top-image {
-  opacity: 0.7;
+.grid-lines {
+  display: none;
+}
+
+.screen-content {
+  color: var(--foreground);
+}
+
+.screen-content .panel,
+.screen-content .panel-2 {
+  color: var(--foreground);
 }
 
 @layer base {
@@ -182,7 +130,7 @@
   letter-spacing: 0.005em;
 }
 
-/* frosted panel that always sits ABOVE the stadium photo */
+/* frosted panel for elevated content */
 @utility panel {
   background-color: var(--surface);
   backdrop-filter: blur(18px) saturate(120%);

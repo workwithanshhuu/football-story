@@ -1,11 +1,5 @@
 import type { ReactNode } from "react";
-import stadium from "@/assets/stadium-night.jpg";
 
-/**
- * Full-bleed stadium backdrop with a fixed veil + pitch grid.
- * Every screen's content renders in its own layer above the photo,
- * so cards, text and icons never blend into the image.
- */
 export function AppShell({
   children,
   className = "",
@@ -15,13 +9,7 @@ export function AppShell({
 }) {
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-background">
-      {/* layer 0 — photograph */}
-      <div
-        aria-hidden
-        className="stadium-backdrop pointer-events-none fixed inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(${stadium})` }}
-      />
-      {/* layer 1 — darkening veil so content stays legible */}
+      {/* layer 1 — tonal veil so content stays legible */}
       <div aria-hidden className="veil pointer-events-none fixed inset-0" />
       {/* layer 2 — pitch grid texture */}
       <div aria-hidden className="grid-lines pointer-events-none fixed inset-0 opacity-60" />

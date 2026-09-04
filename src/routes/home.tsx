@@ -7,21 +7,14 @@ import {
   ClipboardList,
   Clock3,
   Compass,
-  Goal,
-  Handshake,
   Home,
   MapPin,
-  Moon,
   Plus,
   Search,
   Share2,
-  ShieldCheck,
-  Sun,
-  Trophy,
   UserRound,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import pitchTop from "@/assets/pitch-top.jpg";
 import { getCurrentUser, listMatches, type Match, type User } from "@/lib/api";
 
 export const Route = createFileRoute("/home")({
@@ -135,7 +128,6 @@ function HomeScreen() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <ThemeToggle />
           <IconButton label="Search">
             <Search className="size-[18px]" strokeWidth={2.2} />
           </IconButton>
@@ -146,40 +138,8 @@ function HomeScreen() {
       </header>
 
       <main className="space-y-4 px-5">
-        {/* rating strip */}
-        <section className="panel flex items-stretch gap-3 rounded-2xl p-3">
-          <div className="flex flex-col justify-center pr-3">
-            <p className="text-[10px] font-600 tracking-[0.14em] text-muted-foreground uppercase">
-              Skill
-            </p>
-            <p className="tnum font-display text-3xl leading-none font-700 text-primary">
-              {user?.skillSelfRating ?? "—"}
-            </p>
-          </div>
-          <div className="w-px bg-border" />
-          <div className="grid flex-1 grid-cols-3 gap-1">
-            <Stat icon={<Goal className="size-3.5" strokeWidth={2.4} />} value="12" label="Goals" />
-            <Stat
-              icon={<Handshake className="size-3.5" strokeWidth={2.4} />}
-              value="09"
-              label="Assists"
-            />
-            <Stat icon={<Trophy className="size-3.5" strokeWidth={2.4} />} value="04" label="MVP" />
-          </div>
-        </section>
-
         {/* next match */}
         <section className="panel relative overflow-hidden rounded-3xl">
-          <img
-            src={pitchTop}
-            alt=""
-            aria-hidden
-            loading="lazy"
-            width={1024}
-            height={1024}
-            className="pitch-top-image absolute inset-0 size-full object-cover opacity-46"
-          />
-          <div aria-hidden className="veil absolute inset-0" />
           <div className="relative bg-surface/80 p-4">
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-1 text-[10px] font-700 tracking-[0.12em] text-primary uppercase">
@@ -263,34 +223,6 @@ function HomeScreen() {
             ))}
           </div>
         </section>
-
-        {/* last scorecard */}
-        <section className="space-y-2">
-          <SectionHead title="Your last scorecard" action="Share" />
-          <article className="panel rounded-2xl p-4">
-            <div className="flex items-center justify-between">
-              <div className="text-center">
-                <p className="text-[11px] font-600 text-muted-foreground">Powai Rangers</p>
-              </div>
-              <p className="tnum font-display text-3xl leading-none font-700">
-                4 <span className="text-muted-foreground">–</span> 2
-              </p>
-              <div className="text-center">
-                <p className="text-[11px] font-600 text-muted-foreground">Turf Titans</p>
-              </div>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <Chip icon={<Trophy className="size-3" strokeWidth={2.6} />} tone="volt">
-                MVP
-              </Chip>
-              <Chip icon={<Goal className="size-3" strokeWidth={2.6} />}>2 goals</Chip>
-              <Chip icon={<Handshake className="size-3" strokeWidth={2.6} />}>1 assist</Chip>
-              <Chip icon={<ShieldCheck className="size-3" strokeWidth={2.6} />} tone="pitch">
-                Live event card
-              </Chip>
-            </div>
-          </article>
-        </section>
       </main>
 
       {/* tab bar */}
@@ -317,43 +249,6 @@ function HomeScreen() {
   );
 }
 
-function ThemeToggle() {
-  const [isLight, setIsLight] = useState(false);
-
-  useEffect(() => {
-    const storedTheme = localStorage.getItem("footArena.theme");
-    const shouldUseLight = storedTheme === "light";
-    setIsLight(shouldUseLight);
-    document.documentElement.classList.toggle("light", shouldUseLight);
-  }, []);
-
-  function toggleTheme() {
-    const nextIsLight = !isLight;
-    setIsLight(nextIsLight);
-    document.documentElement.classList.toggle("light", nextIsLight);
-    localStorage.setItem("footArena.theme", nextIsLight ? "light" : "dark");
-    window.dispatchEvent(
-      new CustomEvent("footArena:theme-change", { detail: { isLight: nextIsLight } }),
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      aria-label={isLight ? "Switch to dark mode" : "Switch to light mode"}
-      aria-pressed={isLight}
-      onClick={toggleTheme}
-      className="panel-2 flex size-10 items-center justify-center rounded-xl text-primary transition-transform active:scale-95"
-    >
-      {isLight ? (
-        <Sun className="size-[18px]" strokeWidth={2.2} />
-      ) : (
-        <Moon className="size-[18px]" strokeWidth={2.2} />
-      )}
-    </button>
-  );
-}
-
 function IconButton({
   children,
   label,
@@ -376,16 +271,6 @@ function IconButton({
   );
 }
 
-function Stat({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-0.5">
-      <span className="text-pitch">{icon}</span>
-      <span className="tnum text-[15px] leading-none font-700">{value}</span>
-      <span className="text-[9px] tracking-[0.1em] text-muted-foreground uppercase">{label}</span>
-    </div>
-  );
-}
-
 function SectionHead({ title, action }: { title: string; action: string }) {
   return (
     <div className="flex items-baseline justify-between px-0.5">
@@ -394,30 +279,6 @@ function SectionHead({ title, action }: { title: string; action: string }) {
       </h3>
       <button className="text-[11px] font-600 text-primary">{action}</button>
     </div>
-  );
-}
-
-function Chip({
-  children,
-  icon,
-  tone = "muted",
-}: {
-  children: React.ReactNode;
-  icon: React.ReactNode;
-  tone?: "muted" | "volt" | "pitch";
-}) {
-  const tones = {
-    muted: "panel-2 text-foreground",
-    volt: "bg-primary/15 text-primary border border-primary/25",
-    pitch: "bg-pitch/20 text-pitch border border-pitch/30",
-  } as const;
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-700 tracking-wide uppercase ${tones[tone]}`}
-    >
-      {icon}
-      {children}
-    </span>
   );
 }
 
