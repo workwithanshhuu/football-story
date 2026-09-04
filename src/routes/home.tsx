@@ -201,10 +201,13 @@ function HomeScreen() {
             </p>
 
             <div className="mt-3 flex items-center gap-2">
-              <button className="volt-fill flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-[12px] font-700 tracking-wide uppercase active:scale-[0.98]">
+              <Link
+                to="/logger"
+                className="volt-fill flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-[12px] font-700 tracking-wide uppercase active:scale-[0.98]"
+              >
                 <ClipboardList className="size-4" strokeWidth={2.4} />
                 Open logger
-              </button>
+              </Link>
               <button className="panel-2 flex size-10 items-center justify-center rounded-xl text-foreground active:scale-95">
                 <Share2 className="size-4" strokeWidth={2.2} />
               </button>
@@ -298,8 +301,10 @@ function HomeScreen() {
         >
           <Plus className="size-5" strokeWidth={2.8} />
         </Link>
-        <Tab icon={<ClipboardList className="size-[18px]" strokeWidth={2.2} />} label="Matches" />
-        <Link to="/" className="contents">
+        <Link to="/matches" className="contents">
+          <Tab icon={<ClipboardList className="size-[18px]" strokeWidth={2.2} />} label="Matches" />
+        </Link>
+        <Link to="/profile" className="contents">
           <Tab icon={<UserRound className="size-[18px]" strokeWidth={2.2} />} label="Profile" />
         </Link>
       </nav>

@@ -13,6 +13,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as HostRouteImport } from './routes/host'
+import { Route as LoggerRouteImport } from './routes/logger'
+import { Route as MatchLoggerRouteImport } from './routes/match-logger'
+import { Route as MatchesRouteImport } from './routes/matches'
+import { Route as ProfileRouteImport } from './routes/profile'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +38,46 @@ const HostRoute = HostRouteImport.update({
   path: '/host',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoggerRoute = LoggerRouteImport.update({
+  id: '/logger',
+  path: '/logger',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MatchLoggerRoute = MatchLoggerRouteImport.update({
+  id: '/match-logger',
+  path: '/match-logger',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MatchesRoute = MatchesRouteImport.update({
+  id: '/matches',
+  path: '/matches',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/discover': typeof DiscoverRoute
   '/home': typeof HomeRoute
   '/host': typeof HostRoute
+  '/logger': typeof LoggerRoute
+  '/match-logger': typeof MatchLoggerRoute
+  '/matches': typeof MatchesRoute
+  '/profile': typeof ProfileRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/discover': typeof DiscoverRoute
   '/home': typeof HomeRoute
   '/host': typeof HostRoute
+  '/logger': typeof LoggerRoute
+  '/match-logger': typeof MatchLoggerRoute
+  '/matches': typeof MatchesRoute
+  '/profile': typeof ProfileRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +85,42 @@ export interface FileRoutesById {
   '/discover': typeof DiscoverRoute
   '/home': typeof HomeRoute
   '/host': typeof HostRoute
+  '/logger': typeof LoggerRoute
+  '/match-logger': typeof MatchLoggerRoute
+  '/matches': typeof MatchesRoute
+  '/profile': typeof ProfileRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/discover' | '/home' | '/host'
+  fullPaths:
+    | '/'
+    | '/discover'
+    | '/home'
+    | '/host'
+    | '/logger'
+    | '/match-logger'
+    | '/matches'
+    | '/profile'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/discover' | '/home' | '/host'
-  id: '__root__' | '/' | '/discover' | '/home' | '/host'
+  to:
+    | '/'
+    | '/discover'
+    | '/home'
+    | '/host'
+    | '/logger'
+    | '/match-logger'
+    | '/matches'
+    | '/profile'
+  id:
+    | '__root__'
+    | '/'
+    | '/discover'
+    | '/home'
+    | '/host'
+    | '/logger'
+    | '/match-logger'
+    | '/matches'
+    | '/profile'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +128,10 @@ export interface RootRouteChildren {
   DiscoverRoute: typeof DiscoverRoute
   HomeRoute: typeof HomeRoute
   HostRoute: typeof HostRoute
+  LoggerRoute: typeof LoggerRoute
+  MatchLoggerRoute: typeof MatchLoggerRoute
+  MatchesRoute: typeof MatchesRoute
+  ProfileRoute: typeof ProfileRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +164,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HostRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/logger': {
+      id: '/logger'
+      path: '/logger'
+      fullPath: '/logger'
+      preLoaderRoute: typeof LoggerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/match-logger': {
+      id: '/match-logger'
+      path: '/match-logger'
+      fullPath: '/match-logger'
+      preLoaderRoute: typeof MatchLoggerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/matches': {
+      id: '/matches'
+      path: '/matches'
+      fullPath: '/matches'
+      preLoaderRoute: typeof MatchesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +200,10 @@ const rootRouteChildren: RootRouteChildren = {
   DiscoverRoute: DiscoverRoute,
   HomeRoute: HomeRoute,
   HostRoute: HostRoute,
+  LoggerRoute: LoggerRoute,
+  MatchLoggerRoute: MatchLoggerRoute,
+  MatchesRoute: MatchesRoute,
+  ProfileRoute: ProfileRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

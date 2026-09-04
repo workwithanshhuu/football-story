@@ -207,7 +207,10 @@ function DiscoverScreen() {
           <Home className="size-[18px]" strokeWidth={2.4} />
           <span className="text-[9px] font-600 tracking-wide uppercase">Home</span>
         </Link>
-        <Tab icon={<Compass className="size-[18px]" strokeWidth={2.2} />} label="Discover" active />
+        <span className="flex w-14 flex-col items-center gap-1 py-1 text-primary">
+          <Compass className="size-[18px]" strokeWidth={2.2} />
+          <span className="text-[9px] font-600 tracking-wide uppercase">Discover</span>
+        </span>
         <Link
           to="/host"
           aria-label="Host a match"
@@ -215,8 +218,17 @@ function DiscoverScreen() {
         >
           <Plus className="size-5" strokeWidth={2.8} />
         </Link>
-        <Tab icon={<ClipboardList className="size-[18px]" strokeWidth={2.2} />} label="Matches" />
-        <Link to="/" className="flex w-14 flex-col items-center gap-1 py-1 text-muted-foreground">
+        <Link
+          to="/matches"
+          className="flex w-14 flex-col items-center gap-1 py-1 text-muted-foreground"
+        >
+          <ClipboardList className="size-[18px]" strokeWidth={2.2} />
+          <span className="text-[9px] font-600 tracking-wide uppercase">Matches</span>
+        </Link>
+        <Link
+          to="/profile"
+          className="flex w-14 flex-col items-center gap-1 py-1 text-muted-foreground"
+        >
           <UserRound className="size-[18px]" strokeWidth={2.2} />
           <span className="text-[9px] font-600 tracking-wide uppercase">Profile</span>
         </Link>
@@ -285,15 +297,4 @@ function toDiscoverMatch(match: Match): DiscoverMatch {
     price: match.costPerHead ? `₹${match.costPerHead}` : "Free",
     tone: "pitch",
   };
-}
-
-function Tab({ icon, label, active }: { icon: React.ReactNode; label: string; active?: boolean }) {
-  return (
-    <button
-      className={`flex w-14 flex-col items-center gap-1 py-1 ${active ? "text-primary" : "text-muted-foreground"}`}
-    >
-      {icon}
-      <span className="text-[9px] font-600 tracking-wide uppercase">{label}</span>
-    </button>
-  );
 }
