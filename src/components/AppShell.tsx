@@ -28,7 +28,7 @@ export function AppShell({
 
       {/* layer 3 — content */}
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[430px] flex-col">
-        <div className={`flex flex-1 flex-col ${className}`}>{children}</div>
+        <div className={`screen-content flex flex-1 flex-col ${className}`}>{children}</div>
       </div>
     </div>
   );

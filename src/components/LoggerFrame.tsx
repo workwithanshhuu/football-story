@@ -83,14 +83,19 @@ body:before { content: ""; position: fixed; inset: 0; z-index: -1; background: l
 .ng.team-away.on { background: #68413d; border-color: #9c655e; }
 .pl .av { display: none; }
 .pl { gap: 4px; }
-.light body { background: #eef2e7 url("${stadium}") center / cover fixed; color: #18231d; }
-.light body:before { background: linear-gradient(to right, rgba(31,83,55,.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(31,83,55,.08) 1px, transparent 1px); }
-.light .phone, .light .app { background: rgba(249,252,244,.86); }
-.light .board, .light .scoreboard, .light .sheetcard, .light .logger-panel, .light .pitch-card, .light .action-sheet { background: rgba(255,255,251,.94); color: #18231d; }
-.light .board { background: rgba(247,251,240,.96); }
-.light .stbtn, .light .st, .light .pl, .light .ng, .light .bp, .light .ac, .light .skip, .light .team-badge.home > span { background: #f0f4e9; color: #18231d; }
-.light .switch, .light .log, .light .bar, .light .tabs, .light .bench, .light .actbar, .light .fwrap, .light .msheet { background: rgba(240,245,233,.94); color: #18231d; }
-.light .gpanel, .light .gpanel .gtop, .light .gpanel .gbody { background: #f7faf2; color: #18231d; }
+.light body { background: #f0f3e8 url("${stadium}") center / cover fixed; color: #18231d; }
+.light body:before { display: none; }
+.light .phone, .light .app { background: rgba(250,252,246,.96); color: #18231d; }
+.light .board, .light .scoreboard, .light .sheetcard, .light .logger-panel, .light .pitch-card, .light .action-sheet { background: rgba(250,252,246,.98); color: #18231d; }
+.light .board { background: rgba(243,247,236,.98); }
+.light .stbtn, .light .st, .light .pl, .light .ng, .light .bp, .light .ac, .light .skip, .light .team-badge.home > span { background: #e7eedc; color: #18231d; }
+.light .switch, .light .log, .light .bar, .light .tabs, .light .bench, .light .actbar, .light .fwrap, .light .msheet { background: rgba(246,249,241,.98); color: #18231d; }
+.light .gpanel, .light .gpanel .gtop, .light .gpanel .gbody { background: rgba(250,252,246,.99); color: #18231d; }
+.light .team-badge.away > span, .light .pitch-player span { background: #dfe8d5; }
+.light .team-badge b, .light .team-badge small, .light .bhead, .light .abhead, .light .fcell, .light .pbadge, .light .fminb { color: #18231d; }
+.light .gsub, .light .msheet p, .light .sub, .light .bhint, .light .bempty, .light .ft2, .light .plbl, .light .team-badge small { color: #526153; }
+.light .bar, .light .undo, .light .pl, .light .ng, .light .selbar, .light .sheetcard, .light .gpanel { border-color: rgba(24,35,29,.16); }
+.light .team-picker button.active.home, .light .team-picker button.active.away { background: #e2ecd6; color: #18231d; }
 </style>`;
 
 function themedDocument(html: string, isLight: boolean) {
@@ -113,14 +118,14 @@ export function LoggerFrame({ screen }: { screen: "pitch" | "match" }) {
   }, []);
 
   return (
-    <main className="min-h-screen w-full overflow-hidden bg-[#0b100d]">
-      <div className="pointer-events-auto absolute left-[calc(50%+104px)] top-[23px] z-10 flex h-6 w-[46px] items-center gap-0.5 rounded-full border border-white/15 bg-[#101612]/90 p-0.5 shadow-lg backdrop-blur-md">
+    <main className="min-h-screen w-full overflow-hidden bg-background">
+      <div className="pointer-events-auto absolute left-[calc(50%+104px)] top-[23px] z-10 flex h-6 w-[46px] items-center gap-0.5 rounded-full border border-border bg-surface/90 p-0.5 shadow-lg backdrop-blur-md">
         <button
           type="button"
           title="Pitch view"
           aria-pressed={view === "pitch"}
           onClick={() => setView("pitch")}
-          className={`flex h-5 flex-1 items-center justify-center rounded-full transition-colors ${view === "pitch" ? "bg-[#c6ff4a] text-[#152500]" : "text-[#9eaa9d] hover:bg-white/10"}`}
+          className={`flex h-5 flex-1 items-center justify-center rounded-full transition-colors ${view === "pitch" ? "volt-fill" : "text-muted-foreground hover:bg-accent"}`}
         >
           <Map className="size-3" strokeWidth={2.2} />
         </button>
@@ -129,7 +134,7 @@ export function LoggerFrame({ screen }: { screen: "pitch" | "match" }) {
           title="List view"
           aria-pressed={view === "match"}
           onClick={() => setView("match")}
-          className={`flex h-5 flex-1 items-center justify-center rounded-full transition-colors ${view === "match" ? "bg-[#c6ff4a] text-[#152500]" : "text-[#9eaa9d] hover:bg-white/10"}`}
+          className={`flex h-5 flex-1 items-center justify-center rounded-full transition-colors ${view === "match" ? "volt-fill" : "text-muted-foreground hover:bg-accent"}`}
         >
           <List className="size-3" strokeWidth={2.2} />
         </button>

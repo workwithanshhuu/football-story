@@ -149,6 +149,15 @@
   display: none;
 }
 
+.light .screen-content {
+  color: #f5f8f0;
+}
+
+.light .screen-content .panel,
+.light .screen-content .panel-2 {
+  color: var(--foreground);
+}
+
 .light .pitch-top-image {
   opacity: 0.7;
 }

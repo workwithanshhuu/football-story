@@ -180,7 +180,7 @@ function HomeScreen() {
             className="pitch-top-image absolute inset-0 size-full object-cover opacity-46"
           />
           <div aria-hidden className="veil absolute inset-0" />
-          <div className="relative bg-white/55 p-4">
+          <div className="relative bg-surface/80 p-4">
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-1 text-[10px] font-700 tracking-[0.12em] text-primary uppercase">
                 <Clock3 className="size-3" strokeWidth={2.6} />
