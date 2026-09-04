@@ -288,7 +288,9 @@ function HomeScreen() {
       {/* tab bar */}
       <nav className="panel fixed bottom-4 left-1/2 z-20 flex w-[calc(100%-2.5rem)] max-w-[390px] -translate-x-1/2 items-center justify-between rounded-2xl px-2 py-2">
         <Tab icon={<Home className="size-[18px]" strokeWidth={2.4} />} label="Home" active />
-        <Tab icon={<Compass className="size-[18px]" strokeWidth={2.2} />} label="Discover" />
+        <Link to="/discover" className="contents">
+          <Tab icon={<Compass className="size-[18px]" strokeWidth={2.2} />} label="Discover" />
+        </Link>
         <Link
           to="/host"
           aria-label="Host a match"
