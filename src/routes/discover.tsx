@@ -272,9 +272,12 @@ function MatchCard({ match }: { match: DiscoverMatch }) {
         <span className="tnum text-[10px] font-600 text-muted-foreground">
           {match.joined}/{match.needed} players
         </span>
-        <button className="panel-2 flex items-center gap-0.5 rounded-lg px-2 py-1 text-[10px] font-700 tracking-wide uppercase active:scale-95">
+        <Link
+          to="/matches"
+          className="panel-2 flex items-center gap-0.5 rounded-lg px-2 py-1 text-[10px] font-700 tracking-wide uppercase active:scale-95"
+        >
           Join <ChevronRight className="size-3" strokeWidth={2.6} />
-        </button>
+        </Link>
       </div>
     </article>
   );

@@ -2,14 +2,12 @@
 
 Load the smallest relevant source first:
 
-| Need | Read | Authority |
-|---|---|---|
-| Product behavior or scope | [`requirements.md`](requirements.md) | Canonical |
-| API path or data shape | [`openapi.yaml`](openapi.yaml) | Canonical |
-| User, match, and logging scenarios | [`user-role-scenarios.md`](user-role-scenarios.md) | Supporting reference |
-| Visual layout or interaction treatment | [`figma-design-spec.md`](figma-design-spec.md) | Supporting |
-| Screen-specific visual brief | [`figma-pages/`](figma-pages/) | Supporting |
-| Logger prototype reference | [`match-logger.html`](match-logger.html), [`pitch-logger-v9.html`](pitch-logger-v9.html) | Supporting |
+| Need                               | Read                                                                                     | Authority            |
+| ---------------------------------- | ---------------------------------------------------------------------------------------- | -------------------- |
+| Product behavior or scope          | [`requirements.md`](requirements.md)                                                     | Canonical            |
+| API path or data shape             | [`openapi.yaml`](openapi.yaml)                                                           | Canonical            |
+| User, match, and logging scenarios | [`user-role-scenarios.md`](user-role-scenarios.md)                                       | Supporting reference |
+| Logger prototype reference         | [`match-logger.html`](match-logger.html), [`pitch-logger-v9.html`](pitch-logger-v9.html) | Supporting           |
 
 ## Rules
 

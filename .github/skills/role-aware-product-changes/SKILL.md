@@ -1,6 +1,6 @@
 ---
 name: role-aware-product-changes
-description: 'Use when changing footArena users, player/referee/host roles, match participation, scorers, logging, scorecards, stats, sharing, lifecycle, or permissions. Keeps account roles, match roles, and write permissions separate.'
+description: "Use when changing footArena users, player/referee/host roles, match participation, scorers, logging, scorecards, stats, sharing, lifecycle, or permissions. Keeps account roles, match roles, and write permissions separate."
 user-invocable: false
 ---
 

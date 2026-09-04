@@ -1,4 +1,5 @@
 <!-- LOVABLE:BEGIN -->
+
 > [!IMPORTANT]
 > This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
 > published git history — force pushing, or rebasing/amending/squashing commits
@@ -7,6 +8,7 @@
 >
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
+
 <!-- LOVABLE:END -->
 
 # Repository Rules
@@ -16,7 +18,6 @@
 - Product behavior, scope, phases, decisions, and requirement IDs: [`docs/requirements.md`](docs/requirements.md).
 - HTTP resources, schemas, enums, and operation contracts: [`docs/openapi.yaml`](docs/openapi.yaml).
 - If the two files disagree, stop and resolve the contradiction explicitly; do not invent a third interpretation.
-- Figma pages and HTML prototypes are visual references only. They may clarify presentation, but they cannot add behavior or change a contract.
 
 ## Change workflow
 
@@ -29,7 +30,7 @@
 ## Local conventions
 
 - This is a Vite + React + TanStack Start app. Routes live in `src/routes/`; shared UI lives in `src/components/`.
-- Prefer existing components, tokens, and `lucide-react` icons. Preserve the visual language in [`docs/figma-design-spec.md`](docs/figma-design-spec.md).
+- Prefer existing components, tokens, and `lucide-react` icons.
 - Use `pnpm lint` and `pnpm build` for validation when the change touches application code.
 
 ## Role and Match Scenario Model
@@ -40,3 +41,9 @@
 - Enforce the single active logger per match. A player, host, referee, or scorer may hold that designation, but participant status alone must never grant event-write permission.
 - Do not introduce a new account type for a combination already expressible as switchable account roles plus match-scoped assignments. If behavior or the API contract changes, trace it to the applicable requirement IDs and update the canonical docs together.
 - Use the role-aware change workflow in [`.github/skills/role-aware-product-changes/SKILL.md`](.github/skills/role-aware-product-changes/SKILL.md) when changing role-sensitive behavior.
+
+## Pitch Logger Protection
+
+- Treat the current pitch logger screen as frozen. Do not make changes to its layout, styling, copy, interaction behavior, animations, activity cards, pitch view, or read-only presentation.
+- This protection applies to `/logger`, `/player`, `src/components/LoggerFrame.tsx`, the pitch logger styles in `src/styles.css`, and the reference behavior in `docs/pitch-logger-v9.html`.
+- Do not refactor, restyle, or “clean up” these surfaces as part of unrelated work. Only change them when the user explicitly requests a pitch logger change.

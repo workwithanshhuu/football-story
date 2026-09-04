@@ -12,11 +12,11 @@ If this document conflicts with either canonical source, stop and resolve the co
 
 Do not model every combination as a separate account type. Keep three dimensions separate:
 
-| Dimension | Meaning | Examples |
-|---|---|---|
-| Account role | What a user can generally do | Player, referee, organizer/host, volunteer |
-| Match role | How the user is involved in one match | Participant, host, referee, scorer, spectator |
-| Permission | What the user may do to this match's data | View, basic result entry, detailed event logging, correct, administer |
+| Dimension    | Meaning                                   | Examples                                                              |
+| ------------ | ----------------------------------------- | --------------------------------------------------------------------- |
+| Account role | What a user can generally do              | Player, referee, organizer/host, volunteer                            |
+| Match role   | How the user is involved in one match     | Participant, host, referee, scorer, spectator                         |
+| Permission   | What the user may do to this match's data | View, basic result entry, detailed event logging, correct, administer |
 
 A single account may hold multiple account roles. A match assigns responsibilities locally. Permission must be checked server-side and must not be inferred from participation alone.
 
@@ -24,10 +24,10 @@ A single account may hold multiple account roles. A match assigns responsibiliti
 
 There are two distinct scoring experiences:
 
-| Mode | Use when | Output |
-|---|---|---|
-| Detailed live logging | Events are captured during play by the active logger | Event ledger, live score, derived detailed scorecard and player actions |
-| Basic post-match logging | No one can capture events during play | Final result and explicitly limited summary; never imply a complete event history |
+| Mode                     | Use when                                             | Output                                                                            |
+| ------------------------ | ---------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Detailed live logging    | Events are captured during play by the active logger | Event ledger, live score, derived detailed scorecard and player actions           |
+| Basic post-match logging | No one can capture events during play                | Final result and explicitly limited summary; never imply a complete event history |
 
 There is exactly one active logger per match. A handover may move that designation to another device or user, but concurrent multi-logger editing is not supported.
 

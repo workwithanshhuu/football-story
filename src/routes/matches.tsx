@@ -185,9 +185,20 @@ function MatchRow({ match }: { match: Match }) {
         <span className="tnum text-[10px] text-muted-foreground">
           {match.playersJoined}/{match.playersNeeded} players in
         </span>
-        <Link to="/player" className="panel-2 ml-auto flex items-center gap-0.5 rounded-lg px-2 py-1 text-[10px] font-700 tracking-wide uppercase active:scale-95">
-          View <ChevronRight className="size-3" strokeWidth={2.6} />
-        </Link>
+        <div className="ml-auto flex items-center gap-2">
+          <Link
+            to="/basic-result"
+            className="panel-2 flex items-center gap-0.5 rounded-lg px-2 py-1 text-[10px] font-700 tracking-wide uppercase active:scale-95"
+          >
+            Result
+          </Link>
+          <Link
+            to="/player"
+            className="panel-2 flex items-center gap-0.5 rounded-lg px-2 py-1 text-[10px] font-700 tracking-wide uppercase active:scale-95"
+          >
+            View <ChevronRight className="size-3" strokeWidth={2.6} />
+          </Link>
+        </div>
       </div>
     </article>
   );

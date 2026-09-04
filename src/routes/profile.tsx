@@ -96,7 +96,10 @@ function ProfileScreen() {
             </div>
           </div>
           <div className="relative mt-5 grid grid-cols-3 gap-2 border-t border-border pt-4">
-            <ProfileStat value={user?.skillSelfRating ? String(user.skillSelfRating) : "—"} label="Skill" />
+            <ProfileStat
+              value={user?.skillSelfRating ? String(user.skillSelfRating) : "—"}
+              label="Skill"
+            />
             <ProfileStat value="12" label="Goals" />
             <ProfileStat value="04" label="MVPs" />
           </div>
@@ -133,6 +136,7 @@ function ProfileScreen() {
             Your footArena
           </h2>
           <ProfileAction
+            href="/matches"
             icon={<Trophy className="size-4" />}
             title="Scorecards"
             detail="Your match history and ratings"
@@ -238,7 +242,7 @@ function ProfileAction({
   icon: React.ReactNode;
   title: string;
   detail: string;
-  href?: "/referee" | "/player";
+  href?: "/matches" | "/referee" | "/player";
 }) {
   const content = (
     <>

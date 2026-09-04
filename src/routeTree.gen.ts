@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BasicResultRouteImport } from './routes/basic-result'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as HostRouteImport } from './routes/host'
@@ -22,6 +23,11 @@ import { Route as RefereeRouteImport } from './routes/referee'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BasicResultRoute = BasicResultRouteImport.update({
+  id: '/basic-result',
+  path: '/basic-result',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiscoverRoute = DiscoverRouteImport.update({
@@ -67,6 +73,7 @@ const RefereeRoute = RefereeRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/basic-result': typeof BasicResultRoute
   '/discover': typeof DiscoverRoute
   '/home': typeof HomeRoute
   '/host': typeof HostRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/basic-result': typeof BasicResultRoute
   '/discover': typeof DiscoverRoute
   '/home': typeof HomeRoute
   '/host': typeof HostRoute
@@ -90,6 +98,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/basic-result': typeof BasicResultRoute
   '/discover': typeof DiscoverRoute
   '/home': typeof HomeRoute
   '/host': typeof HostRoute
@@ -103,6 +112,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/basic-result'
     | '/discover'
     | '/home'
     | '/host'
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/basic-result'
     | '/discover'
     | '/home'
     | '/host'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/basic-result'
     | '/discover'
     | '/home'
     | '/host'
@@ -137,6 +149,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BasicResultRoute: typeof BasicResultRoute
   DiscoverRoute: typeof DiscoverRoute
   HomeRoute: typeof HomeRoute
   HostRoute: typeof HostRoute
@@ -154,6 +167,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/basic-result': {
+      id: '/basic-result'
+      path: '/basic-result'
+      fullPath: '/basic-result'
+      preLoaderRoute: typeof BasicResultRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/discover': {
@@ -217,6 +237,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BasicResultRoute: BasicResultRoute,
   DiscoverRoute: DiscoverRoute,
   HomeRoute: HomeRoute,
   HostRoute: HostRoute,

@@ -59,7 +59,8 @@ function HostScreen() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    listFormats()
+    const accessToken = localStorage.getItem("footArena.accessToken");
+    listFormats(accessToken ?? undefined)
       .then((items) => {
         if (items.length) setFormats(items);
       })
@@ -158,8 +159,12 @@ function HostScreen() {
       ]);
       await publishMatch(accessToken, match.id);
       window.location.href = "/home";
-    } catch {
-      setError("We could not publish this match. Check your connection and try again.");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? `Could not publish this match: ${error.message}`
+          : "Could not publish this match. Check your connection and try again.",
+      );
     } finally {
       setIsSaving(false);
     }

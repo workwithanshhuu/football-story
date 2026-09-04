@@ -27,6 +27,7 @@ function LoginScreen() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -36,7 +37,7 @@ function LoginScreen() {
     setIsSubmitting(true);
     try {
       const tokens = isRegistering
-        ? await registerWithEmail(email, password)
+        ? await registerWithEmail(email, password, displayName)
         : await loginWithEmail(email, password);
       localStorage.setItem("footArena.accessToken", tokens.accessToken);
       localStorage.setItem("footArena.refreshToken", tokens.refreshToken);
@@ -99,6 +100,18 @@ function LoginScreen() {
               className="w-full bg-transparent text-sm font-500 outline-none placeholder:text-muted-foreground/70"
             />
           </Field>
+          {isRegistering && (
+            <Field label="Name">
+              <input
+                required
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                type="text"
+                placeholder="Your name"
+                className="w-full bg-transparent text-sm font-500 outline-none placeholder:text-muted-foreground/70"
+              />
+            </Field>
+          )}
           {error && (
             <p role="alert" className="text-xs text-destructive">
               {error}

@@ -128,9 +128,13 @@ function HomeScreen() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <IconButton label="Search">
+          <Link
+            to="/discover"
+            aria-label="Search"
+            className="panel-2 relative flex size-10 items-center justify-center rounded-xl active:scale-95"
+          >
             <Search className="size-[18px]" strokeWidth={2.2} />
-          </IconButton>
+          </Link>
           <IconButton label="Notifications" dot>
             <Bell className="size-[18px]" strokeWidth={2.2} />
           </IconButton>
@@ -167,7 +171,7 @@ function HomeScreen() {
 
             <div className="mt-3 flex items-center gap-2">
               <Link
-                to="/referee"
+                to="/logger"
                 className="volt-fill flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-[12px] font-700 tracking-wide uppercase active:scale-[0.98]"
               >
                 <ClipboardList className="size-4" strokeWidth={2.4} />
@@ -214,10 +218,13 @@ function HomeScreen() {
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
                   <span className="tnum text-[11px] font-700 text-primary">{m.price}</span>
-                  <button className="panel-2 flex items-center gap-0.5 rounded-lg px-2 py-1 text-[10px] font-700 tracking-wide uppercase active:scale-95">
+                  <Link
+                    to="/matches"
+                    className="panel-2 flex items-center gap-0.5 rounded-lg px-2 py-1 text-[10px] font-700 tracking-wide uppercase active:scale-95"
+                  >
                     Join
                     <ChevronRight className="size-3" strokeWidth={2.6} />
-                  </button>
+                  </Link>
                 </div>
               </article>
             ))}
@@ -277,7 +284,9 @@ function SectionHead({ title, action }: { title: string; action: string }) {
       <h3 className="backdrop-text font-display text-[17px] font-700 tracking-wide uppercase">
         {title}
       </h3>
-      <button className="text-[11px] font-600 text-primary">{action}</button>
+      <Link to="/discover" className="text-[11px] font-600 text-primary">
+        {action}
+      </Link>
     </div>
   );
 }

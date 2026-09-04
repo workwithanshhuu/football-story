@@ -1,435 +1,1305 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>footArena — Home &amp; Host</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-:root{
-  --txt:#0C1A13;--mute:#40584B;--faint:#6C8779;
-  --hi:#0E8A52;--mid:#D97A24;--lo:#D93B36;
-  --glass:rgba(255,255,255,.7);--glass-hi:rgba(255,255,255,.86);
-  --glass-br:rgba(255,255,255,.72);--blur:blur(26px) saturate(180%);
-}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
-body{margin:0;background:#0A130E;font-family:Inter,system-ui,sans-serif;color:#fff;
-  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px 40px}
-.head{text-align:center;margin-bottom:16px;max-width:560px}
-.eyebrow{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#4F7A64;margin-bottom:7px}
-h1{font-size:21px;font-weight:800;margin:0;letter-spacing:-.02em}
-.sub{font-size:12px;color:#7E9A8C;margin-top:6px;line-height:1.55}
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>footArena — Home &amp; Host</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --txt: #0c1a13;
+        --mute: #40584b;
+        --faint: #6c8779;
+        --hi: #0e8a52;
+        --mid: #d97a24;
+        --lo: #d93b36;
+        --glass: rgba(255, 255, 255, 0.7);
+        --glass-hi: rgba(255, 255, 255, 0.86);
+        --glass-br: rgba(255, 255, 255, 0.72);
+        --blur: blur(26px) saturate(180%);
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+      }
+      body {
+        margin: 0;
+        background: #0a130e;
+        font-family: Inter, system-ui, sans-serif;
+        color: #fff;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px 16px 40px;
+      }
+      .head {
+        text-align: center;
+        margin-bottom: 16px;
+        max-width: 560px;
+      }
+      .eyebrow {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #4f7a64;
+        margin-bottom: 7px;
+      }
+      h1 {
+        font-size: 21px;
+        font-weight: 800;
+        margin: 0;
+        letter-spacing: -0.02em;
+      }
+      .sub {
+        font-size: 12px;
+        color: #7e9a8c;
+        margin-top: 6px;
+        line-height: 1.55;
+      }
 
-.phone{width:306px;height:648px;border-radius:32px;overflow:hidden;border:7px solid #16211B;
-  box-shadow:0 16px 50px rgba(0,0,0,.55);position:relative;margin-bottom:16px}
-.field{position:absolute;inset:0;background:
-  radial-gradient(circle at 15% 8%, #4FD394 0%, transparent 42%),
-  radial-gradient(circle at 88% 22%, #17B36B 0%, transparent 45%),
-  radial-gradient(circle at 72% 88%, #0B8A4E 0%, transparent 50%),
-  radial-gradient(circle at 20% 95%, #6EE8AC 0%, transparent 44%),
-  linear-gradient(165deg,#EDFBF3,#DFF6EA 45%,#E9FAF1);
-  animation:drift 18s ease-in-out infinite alternate}
-@keyframes drift{50%{transform:scale(1.08) translate(-2%,1%)}100%{transform:scale(1.04) translate(1%,-2%)}}
-.veil{position:absolute;inset:0;background:rgba(255,255,255,.4)}
-.scr{position:absolute;inset:0;overflow:hidden;color:var(--txt)}
+      .phone {
+        width: 306px;
+        height: 648px;
+        border-radius: 32px;
+        overflow: hidden;
+        border: 7px solid #16211b;
+        box-shadow: 0 16px 50px rgba(0, 0, 0, 0.55);
+        position: relative;
+        margin-bottom: 16px;
+      }
+      .field {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at 15% 8%, #4fd394 0%, transparent 42%),
+          radial-gradient(circle at 88% 22%, #17b36b 0%, transparent 45%),
+          radial-gradient(circle at 72% 88%, #0b8a4e 0%, transparent 50%),
+          radial-gradient(circle at 20% 95%, #6ee8ac 0%, transparent 44%),
+          linear-gradient(165deg, #edfbf3, #dff6ea 45%, #e9faf1);
+        animation: drift 18s ease-in-out infinite alternate;
+      }
+      @keyframes drift {
+        50% {
+          transform: scale(1.08) translate(-2%, 1%);
+        }
+        100% {
+          transform: scale(1.04) translate(1%, -2%);
+        }
+      }
+      .veil {
+        position: absolute;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.4);
+      }
+      .scr {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        color: var(--txt);
+      }
 
-/* FIXED LAYOUT — pane is a column, only .body scrolls */
-.pane{position:absolute;inset:0;display:none;flex-direction:column;padding-top:24px}
-.pane.on{display:flex}
-.sbar{position:absolute;top:0;left:0;right:0;height:24px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 16px;font-size:9px;font-weight:700;opacity:.66;z-index:6}
-.body{flex:1;overflow-y:auto;padding:0 12px;-webkit-overflow-scrolling:touch}
-.body::-webkit-scrollbar{display:none}
-.spacer{height:84px;flex-shrink:0}
+      /* FIXED LAYOUT — pane is a column, only .body scrolls */
+      .pane {
+        position: absolute;
+        inset: 0;
+        display: none;
+        flex-direction: column;
+        padding-top: 24px;
+      }
+      .pane.on {
+        display: flex;
+      }
+      .sbar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        font-size: 9px;
+        font-weight: 700;
+        opacity: 0.66;
+        z-index: 6;
+      }
+      .body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0 12px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .body::-webkit-scrollbar {
+        display: none;
+      }
+      .spacer {
+        height: 84px;
+        flex-shrink: 0;
+      }
 
-.gl{background:var(--glass);backdrop-filter:var(--blur);border:1px solid var(--glass-br);border-radius:18px;
-  box-shadow:0 6px 22px rgba(8,40,26,.09),inset 0 1px 0 rgba(255,255,255,.85)}
-.gl.hi{background:var(--glass-hi)}
-.gl.dark{background:linear-gradient(150deg,rgba(9,32,22,.93),rgba(12,46,32,.9));border-color:rgba(255,255,255,.16);color:#fff}
+      .gl {
+        background: var(--glass);
+        backdrop-filter: var(--blur);
+        border: 1px solid var(--glass-br);
+        border-radius: 18px;
+        box-shadow:
+          0 6px 22px rgba(8, 40, 26, 0.09),
+          inset 0 1px 0 rgba(255, 255, 255, 0.85);
+      }
+      .gl.hi {
+        background: var(--glass-hi);
+      }
+      .gl.dark {
+        background: linear-gradient(150deg, rgba(9, 32, 22, 0.93), rgba(12, 46, 32, 0.9));
+        border-color: rgba(255, 255, 255, 0.16);
+        color: #fff;
+      }
 
-/* profile strip */
-.pstrip{display:flex;align-items:center;gap:10px;padding:8px 14px 12px;flex-shrink:0}
-.pav{width:38px;height:38px;border-radius:50%;background:#0C1A13;color:#4FD394;display:flex;align-items:center;
-  justify-content:center;font-size:13px;font-weight:900;flex-shrink:0}
-.pnm{font-size:14px;font-weight:800;letter-spacing:-.02em}
-.ploc{font-size:10px;color:var(--mute);margin-top:1px;display:flex;align-items:center;gap:3px}
-.pact{margin-left:auto;display:flex;gap:7px}
-.pbtn{width:32px;height:32px;border-radius:11px;background:rgba(255,255,255,.68);border:1px solid rgba(255,255,255,.8);
-  display:flex;align-items:center;justify-content:center;font-size:13px;position:relative}
-.ndot{position:absolute;top:6px;right:7px;width:6px;height:6px;border-radius:50%;background:var(--lo)}
+      /* profile strip */
+      .pstrip {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px 12px;
+        flex-shrink: 0;
+      }
+      .pav {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: #0c1a13;
+        color: #4fd394;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 900;
+        flex-shrink: 0;
+      }
+      .pnm {
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .ploc {
+        font-size: 10px;
+        color: var(--mute);
+        margin-top: 1px;
+        display: flex;
+        align-items: center;
+        gap: 3px;
+      }
+      .pact {
+        margin-left: auto;
+        display: flex;
+        gap: 7px;
+      }
+      .pbtn {
+        width: 32px;
+        height: 32px;
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.68);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        position: relative;
+      }
+      .ndot {
+        position: absolute;
+        top: 6px;
+        right: 7px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--lo);
+      }
 
-/* stat strip */
+      /* stat strip */
 
-/* next match */
-.nmatch{padding:14px;border-radius:19px;margin-bottom:11px;position:relative;overflow:hidden}
-.nmatch:after{content:"";position:absolute;top:-40px;right:-40px;width:130px;height:130px;border-radius:50%;background:rgba(79,211,148,.13)}
-.nmtop{display:flex;align-items:center;gap:7px;position:relative;margin-bottom:10px}
-.nmtag{display:flex;align-items:center;gap:5px;background:rgba(79,211,148,.18);border:1px solid rgba(79,211,148,.3);
-  border-radius:20px;padding:4px 10px;font-size:8.5px;font-weight:800;letter-spacing:.09em;color:#7FE8B4}
-.nmfmt{margin-left:auto;background:rgba(255,255,255,.12);border-radius:20px;padding:4px 10px;font-size:9px;font-weight:800}
-.nmvs{font-size:15px;font-weight:900;letter-spacing:-.025em;line-height:1.25;position:relative}
-.nmvs em{font-style:normal;color:rgba(255,255,255,.45);font-weight:700}
-.nmmeta{font-size:10px;color:rgba(255,255,255,.6);margin-top:6px;position:relative;display:flex;gap:11px;flex-wrap:wrap}
-.nmcta{display:flex;gap:8px;margin-top:13px;position:relative}
-.nmb{flex:1;padding:12px;border-radius:14px;background:#4FD394;color:#06301D;font-size:12px;font-weight:800;text-align:center}
-.nmsh{width:44px;border-radius:14px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);
-  display:flex;align-items:center;justify-content:center;font-size:14px}
+      /* next match */
+      .nmatch {
+        padding: 14px;
+        border-radius: 19px;
+        margin-bottom: 11px;
+        position: relative;
+        overflow: hidden;
+      }
+      .nmatch:after {
+        content: "";
+        position: absolute;
+        top: -40px;
+        right: -40px;
+        width: 130px;
+        height: 130px;
+        border-radius: 50%;
+        background: rgba(79, 211, 148, 0.13);
+      }
+      .nmtop {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        position: relative;
+        margin-bottom: 10px;
+      }
+      .nmtag {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        background: rgba(79, 211, 148, 0.18);
+        border: 1px solid rgba(79, 211, 148, 0.3);
+        border-radius: 20px;
+        padding: 4px 10px;
+        font-size: 8.5px;
+        font-weight: 800;
+        letter-spacing: 0.09em;
+        color: #7fe8b4;
+      }
+      .nmfmt {
+        margin-left: auto;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 20px;
+        padding: 4px 10px;
+        font-size: 9px;
+        font-weight: 800;
+      }
+      .nmvs {
+        font-size: 15px;
+        font-weight: 900;
+        letter-spacing: -0.025em;
+        line-height: 1.25;
+        position: relative;
+      }
+      .nmvs em {
+        font-style: normal;
+        color: rgba(255, 255, 255, 0.45);
+        font-weight: 700;
+      }
+      .nmmeta {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.6);
+        margin-top: 6px;
+        position: relative;
+        display: flex;
+        gap: 11px;
+        flex-wrap: wrap;
+      }
+      .nmcta {
+        display: flex;
+        gap: 8px;
+        margin-top: 13px;
+        position: relative;
+      }
+      .nmb {
+        flex: 1;
+        padding: 12px;
+        border-radius: 14px;
+        background: #4fd394;
+        color: #06301d;
+        font-size: 12px;
+        font-weight: 800;
+        text-align: center;
+      }
+      .nmsh {
+        width: 44px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.13);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+      }
 
-/* quick actions */
-.qa.pri 
+      /* quick actions */
+      .qa.pri 
 /* section head */
-.sh{display:flex;align-items:center;justify-content:space-between;padding:4px 4px 14px}
-.sht{font-size:12.5px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}
-.shl{font-size:10.5px;font-weight:700;color:var(--hi);padding-left:14px}
+.sh {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 4px 14px;
+      }
+      .sht {
+        font-size: 12.5px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+      .shl {
+        font-size: 10.5px;
+        font-weight: 700;
+        color: var(--hi);
+        padding-left: 14px;
+      }
 
-/* nearby match */
-.nb{display:flex;align-items:center;gap:11px;padding:11px;border-radius:16px;margin-bottom:8px}
-.nbf{width:44px;height:44px;border-radius:14px;background:rgba(14,138,82,.13);display:flex;flex-direction:column;
-  align-items:center;justify-content:center;flex-shrink:0}
-.nbf b{font-size:11px;font-weight:900;color:var(--hi);line-height:1}
-.nbf span{font-size:7.5px;font-weight:700;color:var(--hi);margin-top:2px}
-.nbi{flex:1;min-width:0}
-.nbn{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.nbm{font-size:9.5px;color:var(--mute);margin-top:2px}
-.nbbar{display:flex;align-items:center;gap:7px;margin-top:7px}
-.nbtrack{flex:1;height:4px;border-radius:3px;background:rgba(12,26,19,.09);overflow:hidden}
-.nbfill{height:100%;background:var(--hi);border-radius:3px}
-.nbc{font-size:8.5px;font-weight:700;color:var(--mute);white-space:nowrap}
-.nbr{display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0}
-.nbp{font-size:12px;font-weight:900;color:var(--hi)}
-.nbj{background:#0C1A13;color:#fff;border-radius:20px;padding:5px 12px;font-size:9.5px;font-weight:800}
+      /* nearby match */
+      .nb {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 11px;
+        border-radius: 16px;
+        margin-bottom: 8px;
+      }
+      .nbf {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: rgba(14, 138, 82, 0.13);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .nbf b {
+        font-size: 11px;
+        font-weight: 900;
+        color: var(--hi);
+        line-height: 1;
+      }
+      .nbf span {
+        font-size: 7.5px;
+        font-weight: 700;
+        color: var(--hi);
+        margin-top: 2px;
+      }
+      .nbi {
+        flex: 1;
+        min-width: 0;
+      }
+      .nbn {
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .nbm {
+        font-size: 9.5px;
+        color: var(--mute);
+        margin-top: 2px;
+      }
+      .nbbar {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 7px;
+      }
+      .nbtrack {
+        flex: 1;
+        height: 4px;
+        border-radius: 3px;
+        background: rgba(12, 26, 19, 0.09);
+        overflow: hidden;
+      }
+      .nbfill {
+        height: 100%;
+        background: var(--hi);
+        border-radius: 3px;
+      }
+      .nbc {
+        font-size: 8.5px;
+        font-weight: 700;
+        color: var(--mute);
+        white-space: nowrap;
+      }
+      .nbr {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 7px;
+        flex-shrink: 0;
+      }
+      .nbp {
+        font-size: 12px;
+        font-weight: 900;
+        color: var(--hi);
+      }
+      .nbj {
+        background: #0c1a13;
+        color: #fff;
+        border-radius: 20px;
+        padding: 5px 12px;
+        font-size: 9.5px;
+        font-weight: 800;
+      }
 
-/* scorecard mini */
-.scard{padding:13px;border-radius:17px;margin-bottom:9px}
-.scr2{display:flex;align-items:center;gap:10px}
-.st1{flex:1;font-size:10.5px;font-weight:700;color:var(--mute)}
-.st1.r{text-align:right}
-.ssc{font-size:24px;font-weight:900;letter-spacing:-.04em}
-.stags{display:flex;gap:5px;flex-wrap:wrap;margin-top:11px}
-.stag{font-size:9px;font-weight:800;padding:5px 10px;border-radius:20px;background:rgba(12,26,19,.06);color:var(--mute)}
-.stag.gold{background:rgba(201,153,43,.16);color:#8A6A12}
-.stag.ver{background:rgba(14,138,82,.13);color:var(--hi)}
+      /* scorecard mini */
+      .scard {
+        padding: 13px;
+        border-radius: 17px;
+        margin-bottom: 9px;
+      }
+      .scr2 {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .st1 {
+        flex: 1;
+        font-size: 10.5px;
+        font-weight: 700;
+        color: var(--mute);
+      }
+      .st1.r {
+        text-align: right;
+      }
+      .ssc {
+        font-size: 24px;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+      }
+      .stags {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        margin-top: 11px;
+      }
+      .stag {
+        font-size: 9px;
+        font-weight: 800;
+        padding: 5px 10px;
+        border-radius: 20px;
+        background: rgba(12, 26, 19, 0.06);
+        color: var(--mute);
+      }
+      .stag.gold {
+        background: rgba(201, 153, 43, 0.16);
+        color: #8a6a12;
+      }
+      .stag.ver {
+        background: rgba(14, 138, 82, 0.13);
+        color: var(--hi);
+      }
 
-/* form */
-.form{display:flex;align-items:center;gap:10px;padding:12px;border-radius:16px}
-.fl{flex:1;font-size:11px;font-weight:700}
-.fd{display:flex;gap:5px}
-.fp{width:21px;height:21px;border-radius:50%;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;color:#fff}
-.fp.w{background:var(--hi)}.fp.d{background:#9AA9A0}.fp.l{background:var(--lo)}
+      /* form */
+      .form {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        border-radius: 16px;
+      }
+      .fl {
+        flex: 1;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .fd {
+        display: flex;
+        gap: 5px;
+      }
+      .fp {
+        width: 21px;
+        height: 21px;
+        border-radius: 50%;
+        font-size: 9px;
+        font-weight: 900;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+      }
+      .fp.w {
+        background: var(--hi);
+      }
+      .fp.d {
+        background: #9aa9a0;
+      }
+      .fp.l {
+        background: var(--lo);
+      }
 
-/* ===== HOST ===== */
-.big{font-size:22px;font-weight:900;letter-spacing:-.03em;padding:4px 3px 4px}
-.bigsub{font-size:11.5px;color:var(--mute);padding:0 3px 14px;line-height:1.5}
-.hopt{padding:14px;border-radius:18px;margin-bottom:9px;display:flex;align-items:flex-start;gap:12px;position:relative;overflow:hidden}
-.hopt.pri:after{content:"";position:absolute;top:-30px;right:-30px;width:110px;height:110px;border-radius:50%;background:rgba(79,211,148,.13)}
-.hi2{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;position:relative}
-.hi2.g{background:rgba(79,211,148,.2)}
-.hi2.l{background:rgba(14,138,82,.12)}
-.hn{font-size:13.5px;font-weight:800;letter-spacing:-.015em;position:relative}
-.hd2{font-size:10.5px;margin-top:4px;line-height:1.5;position:relative}
-.hopt.pri .hd2{color:rgba(255,255,255,.62)}
-.hopt .hd2{color:var(--mute)}
-.harrow{margin-left:auto;font-size:15px;color:var(--faint);align-self:center}
-.hopt.pri .harrow{color:rgba(255,255,255,.5)}
+      /* ===== HOST ===== */
+      .big {
+        font-size: 22px;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        padding: 4px 3px 4px;
+      }
+      .bigsub {
+        font-size: 11.5px;
+        color: var(--mute);
+        padding: 0 3px 14px;
+        line-height: 1.5;
+      }
+      .hopt {
+        padding: 14px;
+        border-radius: 18px;
+        margin-bottom: 9px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        position: relative;
+        overflow: hidden;
+      }
+      .hopt.pri:after {
+        content: "";
+        position: absolute;
+        top: -30px;
+        right: -30px;
+        width: 110px;
+        height: 110px;
+        border-radius: 50%;
+        background: rgba(79, 211, 148, 0.13);
+      }
+      .hi2 {
+        width: 40px;
+        height: 40px;
+        border-radius: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 17px;
+        flex-shrink: 0;
+        position: relative;
+      }
+      .hi2.g {
+        background: rgba(79, 211, 148, 0.2);
+      }
+      .hi2.l {
+        background: rgba(14, 138, 82, 0.12);
+      }
+      .hn {
+        font-size: 13.5px;
+        font-weight: 800;
+        letter-spacing: -0.015em;
+        position: relative;
+      }
+      .hd2 {
+        font-size: 10.5px;
+        margin-top: 4px;
+        line-height: 1.5;
+        position: relative;
+      }
+      .hopt.pri .hd2 {
+        color: rgba(255, 255, 255, 0.62);
+      }
+      .hopt .hd2 {
+        color: var(--mute);
+      }
+      .harrow {
+        margin-left: auto;
+        font-size: 15px;
+        color: var(--faint);
+        align-self: center;
+      }
+      .hopt.pri .harrow {
+        color: rgba(255, 255, 255, 0.5);
+      }
 
-.hstep{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:14px;margin-bottom:7px}
-.hsn{width:24px;height:24px;border-radius:8px;background:rgba(14,138,82,.13);color:var(--hi);
-  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0}
-.hst{font-size:11.5px;font-weight:600}
-.hss{font-size:9.5px;color:var(--faint);margin-top:1px}
+      .hstep {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 11px 12px;
+        border-radius: 14px;
+        margin-bottom: 7px;
+      }
+      .hsn {
+        width: 24px;
+        height: 24px;
+        border-radius: 8px;
+        background: rgba(14, 138, 82, 0.13);
+        color: var(--hi);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 900;
+        flex-shrink: 0;
+      }
+      .hst {
+        font-size: 11.5px;
+        font-weight: 600;
+      }
+      .hss {
+        font-size: 9.5px;
+        color: var(--faint);
+        margin-top: 1px;
+      }
 
-.hbanner{padding:13px;border-radius:16px;margin-bottom:11px;font-size:10.5px;line-height:1.6;color:var(--mute)}
-.hbanner b{color:var(--txt);font-weight:700;display:block;margin-bottom:3px;font-size:11.5px}
+      .hbanner {
+        padding: 13px;
+        border-radius: 16px;
+        margin-bottom: 11px;
+        font-size: 10.5px;
+        line-height: 1.6;
+        color: var(--mute);
+      }
+      .hbanner b {
+        color: var(--txt);
+        font-weight: 700;
+        display: block;
+        margin-bottom: 3px;
+        font-size: 11.5px;
+      }
 
-/* my games */
-.gm{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:15px;margin-bottom:7px}
-.gmr{width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;
-  font-size:12.5px;font-weight:900;color:#fff;flex-shrink:0}
-.gmi{flex:1;min-width:0}
-.gmn{font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.gmd{font-size:9.5px;color:var(--mute);margin-top:2px}
-.gmt{font-size:9px;font-weight:800;padding:3px 7px;border-radius:6px;flex-shrink:0}
-.gmt.w{background:rgba(14,138,82,.14);color:var(--hi)}
-.gmt.l{background:rgba(217,59,54,.11);color:var(--lo)}
-.gmt.d{background:rgba(12,26,19,.07);color:var(--mute)}
-.up{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:15px;margin-bottom:8px}
-.upd{background:rgba(14,138,82,.13);border-radius:11px;padding:7px 8px;text-align:center;flex-shrink:0;min-width:46px}
-.upd b{display:block;font-size:11.5px;font-weight:900;color:var(--hi);line-height:1}
-.upd span{font-size:7.5px;font-weight:800;color:var(--hi);letter-spacing:.05em}
-.upi{flex:1;min-width:0}
-.upn{font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ups{font-size:9.5px;color:var(--mute);margin-top:2px}
-.upgo{font-size:14px;color:var(--faint);flex-shrink:0}
+      /* my games */
+      .gm {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 12px;
+        border-radius: 15px;
+        margin-bottom: 7px;
+      }
+      .gmr {
+        width: 34px;
+        height: 34px;
+        border-radius: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12.5px;
+        font-weight: 900;
+        color: #fff;
+        flex-shrink: 0;
+      }
+      .gmi {
+        flex: 1;
+        min-width: 0;
+      }
+      .gmn {
+        font-size: 11.5px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .gmd {
+        font-size: 9.5px;
+        color: var(--mute);
+        margin-top: 2px;
+      }
+      .gmt {
+        font-size: 9px;
+        font-weight: 800;
+        padding: 3px 7px;
+        border-radius: 6px;
+        flex-shrink: 0;
+      }
+      .gmt.w {
+        background: rgba(14, 138, 82, 0.14);
+        color: var(--hi);
+      }
+      .gmt.l {
+        background: rgba(217, 59, 54, 0.11);
+        color: var(--lo);
+      }
+      .gmt.d {
+        background: rgba(12, 26, 19, 0.07);
+        color: var(--mute);
+      }
+      .up {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 12px;
+        border-radius: 15px;
+        margin-bottom: 8px;
+      }
+      .upd {
+        background: rgba(14, 138, 82, 0.13);
+        border-radius: 11px;
+        padding: 7px 8px;
+        text-align: center;
+        flex-shrink: 0;
+        min-width: 46px;
+      }
+      .upd b {
+        display: block;
+        font-size: 11.5px;
+        font-weight: 900;
+        color: var(--hi);
+        line-height: 1;
+      }
+      .upd span {
+        font-size: 7.5px;
+        font-weight: 800;
+        color: var(--hi);
+        letter-spacing: 0.05em;
+      }
+      .upi {
+        flex: 1;
+        min-width: 0;
+      }
+      .upn {
+        font-size: 11.5px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .ups {
+        font-size: 9.5px;
+        color: var(--mute);
+        margin-top: 2px;
+      }
+      .upgo {
+        font-size: 14px;
+        color: var(--faint);
+        flex-shrink: 0;
+      }
 
-/* profile */
-.phead{padding:16px;border-radius:20px;margin-bottom:10px}
-.prr{display:flex;align-items:center;gap:12px}
-.pav2{width:54px;height:54px;border-radius:50%;background:#fff;color:#0C1A13;display:flex;align-items:center;
-  justify-content:center;font-size:20px;font-weight:900;flex-shrink:0}
-.pn2{font-size:17px;font-weight:800;letter-spacing:-.025em}
-.pd2{font-size:10.5px;color:rgba(255,255,255,.6);margin-top:2px}
-.prt{margin-left:auto;text-align:right}
-.prv{font-size:26px;font-weight:900;color:#7BF0B8;line-height:1}
-.prl{font-size:8px;color:rgba(255,255,255,.45);letter-spacing:.1em;margin-top:3px}
-.pstat{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:14px}
-.psb{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:9px}
-.psb b{display:block;font-size:16px;font-weight:900;color:#fff}
-.psb span{font-size:7.5px;color:rgba(255,255,255,.55);letter-spacing:.08em;font-weight:700;margin-top:3px;display:block}
-.mrow{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:14px;margin-bottom:6px}
-.mi{width:30px;height:30px;border-radius:10px;background:rgba(12,26,19,.05);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
-.mn2{flex:1;font-size:11.5px;font-weight:600}
-.mg{font-size:13px;color:var(--faint)}
-.lock{font-size:8px;font-weight:900;letter-spacing:.09em;padding:3px 7px;border-radius:20px;
-  background:rgba(201,153,43,.16);color:#8A6A12;margin-right:2px}
+      /* profile */
+      .phead {
+        padding: 16px;
+        border-radius: 20px;
+        margin-bottom: 10px;
+      }
+      .prr {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .pav2 {
+        width: 54px;
+        height: 54px;
+        border-radius: 50%;
+        background: #fff;
+        color: #0c1a13;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        font-weight: 900;
+        flex-shrink: 0;
+      }
+      .pn2 {
+        font-size: 17px;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+      }
+      .pd2 {
+        font-size: 10.5px;
+        color: rgba(255, 255, 255, 0.6);
+        margin-top: 2px;
+      }
+      .prt {
+        margin-left: auto;
+        text-align: right;
+      }
+      .prv {
+        font-size: 26px;
+        font-weight: 900;
+        color: #7bf0b8;
+        line-height: 1;
+      }
+      .prl {
+        font-size: 8px;
+        color: rgba(255, 255, 255, 0.45);
+        letter-spacing: 0.1em;
+        margin-top: 3px;
+      }
+      .pstat {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 7px;
+        margin-top: 14px;
+      }
+      .psb {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 12px;
+        padding: 9px;
+      }
+      .psb b {
+        display: block;
+        font-size: 16px;
+        font-weight: 900;
+        color: #fff;
+      }
+      .psb span {
+        font-size: 7.5px;
+        color: rgba(255, 255, 255, 0.55);
+        letter-spacing: 0.08em;
+        font-weight: 700;
+        margin-top: 3px;
+        display: block;
+      }
+      .mrow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 12px;
+        border-radius: 14px;
+        margin-bottom: 6px;
+      }
+      .mi {
+        width: 30px;
+        height: 30px;
+        border-radius: 10px;
+        background: rgba(12, 26, 19, 0.05);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        flex-shrink: 0;
+      }
+      .mn2 {
+        flex: 1;
+        font-size: 11.5px;
+        font-weight: 600;
+      }
+      .mg {
+        font-size: 13px;
+        color: var(--faint);
+      }
+      .lock {
+        font-size: 8px;
+        font-weight: 900;
+        letter-spacing: 0.09em;
+        padding: 3px 7px;
+        border-radius: 20px;
+        background: rgba(201, 153, 43, 0.16);
+        color: #8a6a12;
+        margin-right: 2px;
+      }
 
-/* NAV */
-.nav{position:absolute;left:12px;right:12px;bottom:12px;height:60px;border-radius:22px;
-  display:flex;align-items:center;padding:5px;z-index:10;
-  background:rgba(255,255,255,.6);
-  backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);
-  border:1px solid rgba(255,255,255,.8);
-  box-shadow:0 8px 30px rgba(6,36,22,.2),inset 0 1px 0 rgba(255,255,255,.95)}
-.navpill{position:absolute;top:5px;bottom:5px;border-radius:18px;z-index:1;left:5px;width:0;
-  background:rgba(255,255,255,.88);backdrop-filter:blur(16px) saturate(200%);
-  border:1px solid rgba(255,255,255,.92);
-  box-shadow:0 3px 10px rgba(8,40,26,.14),inset 0 1px 0 rgba(255,255,255,1);
-  transition:left .42s cubic-bezier(.3,1.25,.4,1),width .42s cubic-bezier(.3,1.25,.4,1)}
-.ni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-  position:relative;z-index:2;cursor:pointer;height:100%;border-radius:18px}
-.nico{font-size:16px;line-height:1;filter:grayscale(1) opacity(.42);transition:.28s}
-.nlbl{font-size:8.5px;font-weight:700;color:var(--faint);transition:.28s}
-.ni.on .nico{filter:none;transform:translateY(-1px)}
-.ni.on .nlbl{color:var(--txt);font-weight:800}
+      /* NAV */
+      .nav {
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        height: 60px;
+        border-radius: 22px;
+        display: flex;
+        align-items: center;
+        padding: 5px;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(30px) saturate(190%);
+        -webkit-backdrop-filter: blur(30px) saturate(190%);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow:
+          0 8px 30px rgba(6, 36, 22, 0.2),
+          inset 0 1px 0 rgba(255, 255, 255, 0.95);
+      }
+      .navpill {
+        position: absolute;
+        top: 5px;
+        bottom: 5px;
+        border-radius: 18px;
+        z-index: 1;
+        left: 5px;
+        width: 0;
+        background: rgba(255, 255, 255, 0.88);
+        backdrop-filter: blur(16px) saturate(200%);
+        border: 1px solid rgba(255, 255, 255, 0.92);
+        box-shadow:
+          0 3px 10px rgba(8, 40, 26, 0.14),
+          inset 0 1px 0 rgba(255, 255, 255, 1);
+        transition:
+          left 0.42s cubic-bezier(0.3, 1.25, 0.4, 1),
+          width 0.42s cubic-bezier(0.3, 1.25, 0.4, 1);
+      }
+      .ni {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        position: relative;
+        z-index: 2;
+        cursor: pointer;
+        height: 100%;
+        border-radius: 18px;
+      }
+      .nico {
+        font-size: 16px;
+        line-height: 1;
+        filter: grayscale(1) opacity(0.42);
+        transition: 0.28s;
+      }
+      .nlbl {
+        font-size: 8.5px;
+        font-weight: 700;
+        color: var(--faint);
+        transition: 0.28s;
+      }
+      .ni.on .nico {
+        filter: none;
+        transform: translateY(-1px);
+      }
+      .ni.on .nlbl {
+        color: var(--txt);
+        font-weight: 800;
+      }
 
-.hint{font-size:11px;color:#5F7F6E;text-align:center;max-width:420px;line-height:1.6}
-.hint b{color:#8FA89B}
+      .hint {
+        font-size: 11px;
+        color: #5f7f6e;
+        text-align: center;
+        max-width: 420px;
+        line-height: 1.6;
+      }
+      .hint b {
+        color: #8fa89b;
+      }
 
-/* ===== quote ===== */
+      /* ===== quote ===== */
 
+      /* ===== quote ===== */
+      .quote {
+        text-align: center;
+        padding: 22px 24px 16px;
+        margin-top: 2px;
+      }
+      .qtext {
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.6;
+        color: var(--mute);
+      }
+      .qauth {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--faint);
+        margin-top: 7px;
+      }
+      .qheart {
+        margin-top: 8px;
+        font-size: 11px;
+        color: #d9576b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="head">
+      <div class="eyebrow">footArena · App shell</div>
+      <h1>Home, Host &amp; navigation</h1>
+      <div class="sub">Layout fixed, Start renamed to Host, and a full hosting flow added.</div>
+    </div>
 
-/* ===== quote ===== */
-.quote{text-align:center;padding:22px 24px 16px;margin-top:2px}
-.qtext{font-size:12px;font-weight:500;line-height:1.6;color:var(--mute)}
-.qauth{font-size:10px;font-weight:700;color:var(--faint);margin-top:7px}
-.qheart{margin-top:8px;font-size:11px;color:#D9576B}
-</style>
-</head>
-<body>
+    <div class="phone">
+      <div class="field"></div>
+      <div class="veil"></div>
+      <div class="scr">
+        <div class="sbar"><span>9:41</span><span>▮▮▮</span></div>
 
-<div class="head">
-  <div class="eyebrow">footArena · App shell</div>
-  <h1>Home, Host &amp; navigation</h1>
-  <div class="sub">Layout fixed, Start renamed to Host, and a full hosting flow added.</div>
-</div>
-
-<div class="phone">
-  <div class="field"></div><div class="veil"></div>
-  <div class="scr">
-    <div class="sbar"><span>9:41</span><span>▮▮▮</span></div>
-
-    <!-- ===== HOME ===== -->
-    <div class="pane on" id="pHome">
-      <div class="pstrip">
-        <span class="pav">AK</span>
-        <span><div class="pnm">Arjun Khanna</div><div class="ploc">📍 Hyderabad · Gachibowli</div></span>
-        <span class="pact"><span class="pbtn">🔍</span><span class="pbtn">🔔<span class="ndot"></span></span></span>
-      </div>
-      <div class="body">
-        <div class="nmatch gl dark">
-          <div class="nmtop">
-            <span class="nmtag">⏱ NEXT MATCH · IN 6H</span>
-            <span class="nmfmt">6v6</span>
+        <!-- ===== HOME ===== -->
+        <div class="pane on" id="pHome">
+          <div class="pstrip">
+            <span class="pav">AK</span>
+            <span
+              ><div class="pnm">Arjun Khanna</div>
+              <div class="ploc">📍 Hyderabad · Gachibowli</div></span
+            >
+            <span class="pact"
+              ><span class="pbtn">🔍</span><span class="pbtn">🔔<span class="ndot"></span></span
+            ></span>
           </div>
-          <div class="nmvs">GACHIBOWLI FC <em>vs</em> KONDAPUR SC</div>
-          <div class="nmmeta"><span>📅 Today · 7:00 PM</span><span>📍 Turf Arena</span></div>
-          <div class="nmcta">
-            <span class="nmb">📋 Open logger</span>
-            <span class="nmsh">↗</span>
+          <div class="body">
+            <div class="nmatch gl dark">
+              <div class="nmtop">
+                <span class="nmtag">⏱ NEXT MATCH · IN 6H</span>
+                <span class="nmfmt">6v6</span>
+              </div>
+              <div class="nmvs">GACHIBOWLI FC <em>vs</em> KONDAPUR SC</div>
+              <div class="nmmeta"><span>📅 Today · 7:00 PM</span><span>📍 Turf Arena</span></div>
+              <div class="nmcta">
+                <span class="nmb">📋 Open logger</span>
+                <span class="nmsh">↗</span>
+              </div>
+            </div>
+
+            <div class="sh">
+              <span class="sht">Matches near you</span><span class="shl">See all</span>
+            </div>
+            <div class="nb gl hi">
+              <span class="nbf"><b>6v6</b><span>2.4 KM</span></span>
+              <span class="nbi">
+                <div class="nbn">Turf Arena · Sunday Sweat</div>
+                <div class="nbm">Sun · 7:00 AM · Gachibowli</div>
+                <div class="nbbar">
+                  <span class="nbtrack"
+                    ><i class="nbfill" style="width: 83%; display: block"></i></span
+                  ><span class="nbc">10/12 in</span>
+                </div>
+              </span>
+              <span class="nbr"><span class="nbp">₹250</span><span class="nbj">JOIN ›</span></span>
+            </div>
+            <div class="nb gl">
+              <span class="nbf"><b>5v5</b><span>5.1 KM</span></span>
+              <span class="nbi">
+                <div class="nbn">Midweek Fives</div>
+                <div class="nbm">Wed · 9:30 PM · Madhapur</div>
+                <div class="nbbar">
+                  <span class="nbtrack"
+                    ><i class="nbfill" style="width: 80%; display: block"></i></span
+                  ><span class="nbc">8/10 in</span>
+                </div>
+              </span>
+              <span class="nbr"><span class="nbp">₹180</span><span class="nbj">JOIN ›</span></span>
+            </div>
+            <div class="nb gl">
+              <span class="nbf"><b>8v8</b><span>8.7 KM</span></span>
+              <span class="nbi">
+                <div class="nbn">Kukatpally Saturday</div>
+                <div class="nbm">Sat · 6:30 AM · PlayAll</div>
+                <div class="nbbar">
+                  <span class="nbtrack"
+                    ><i class="nbfill" style="width: 69%; display: block"></i></span
+                  ><span class="nbc">11/16 in</span>
+                </div>
+              </span>
+              <span class="nbr"><span class="nbp">Free</span><span class="nbj">JOIN ›</span></span>
+            </div>
+
+            <div class="quote">
+              <div class="qtext" id="qtext">Crazy how my life depends upon how I kick a ball</div>
+              <div class="qauth" id="qauth"></div>
+              <div class="qheart">♥</div>
+            </div>
+
+            <div class="spacer"></div>
           </div>
         </div>
 
-        <div class="sh"><span class="sht">Matches near you</span><span class="shl">See all</span></div>
-        <div class="nb gl hi">
-          <span class="nbf"><b>6v6</b><span>2.4 KM</span></span>
-          <span class="nbi">
-            <div class="nbn">Turf Arena · Sunday Sweat</div>
-            <div class="nbm">Sun · 7:00 AM · Gachibowli</div>
-            <div class="nbbar"><span class="nbtrack"><i class="nbfill" style="width:83%;display:block"></i></span><span class="nbc">10/12 in</span></div>
-          </span>
-          <span class="nbr"><span class="nbp">₹250</span><span class="nbj">JOIN ›</span></span>
-        </div>
-        <div class="nb gl">
-          <span class="nbf"><b>5v5</b><span>5.1 KM</span></span>
-          <span class="nbi">
-            <div class="nbn">Midweek Fives</div>
-            <div class="nbm">Wed · 9:30 PM · Madhapur</div>
-            <div class="nbbar"><span class="nbtrack"><i class="nbfill" style="width:80%;display:block"></i></span><span class="nbc">8/10 in</span></div>
-          </span>
-          <span class="nbr"><span class="nbp">₹180</span><span class="nbj">JOIN ›</span></span>
-        </div>
-        <div class="nb gl">
-          <span class="nbf"><b>8v8</b><span>8.7 KM</span></span>
-          <span class="nbi">
-            <div class="nbn">Kukatpally Saturday</div>
-            <div class="nbm">Sat · 6:30 AM · PlayAll</div>
-            <div class="nbbar"><span class="nbtrack"><i class="nbfill" style="width:69%;display:block"></i></span><span class="nbc">11/16 in</span></div>
-          </span>
-          <span class="nbr"><span class="nbp">Free</span><span class="nbj">JOIN ›</span></span>
-        </div>
+        <!-- ===== HOST ===== -->
+        <div class="pane" id="pHost">
+          <div class="body" style="padding-top: 14px">
+            <div class="big">Host a match</div>
+            <div class="bigsub">
+              Set it up, invite your squad, and let people nearby fill the empty spots.
+            </div>
 
-        <div class="quote">
-          <div class="qtext" id="qtext">Crazy how my life depends upon how I kick a ball</div>
-          <div class="qauth" id="qauth"></div>
-          <div class="qheart">♥</div>
-        </div>
+            <div class="hopt gl dark pri">
+              <span class="hi2 g">⚡</span>
+              <span
+                ><div class="hn">Quick match</div>
+                <div class="hd2">
+                  Just your squad, kicking off now. Straight to the logger in under a minute.
+                </div></span
+              >
+              <span class="harrow">›</span>
+            </div>
 
-        <div class="spacer"></div>
-      </div>
-    </div>
+            <div class="hopt gl hi">
+              <span class="hi2 l">📅</span>
+              <span
+                ><div class="hn">Schedule a match</div>
+                <div class="hd2">
+                  Pick a date, venue and cost. Others can request to join.
+                </div></span
+              >
+              <span class="harrow">›</span>
+            </div>
 
-    <!-- ===== HOST ===== -->
-    <div class="pane" id="pHost">
-      <div class="body" style="padding-top:14px">
-        <div class="big">Host a match</div>
-        <div class="bigsub">Set it up, invite your squad, and let people nearby fill the empty spots.</div>
+            <div class="hopt gl">
+              <span class="hi2 l">🔁</span>
+              <span
+                ><div class="hn">Repeat last match</div>
+                <div class="hd2">Gachibowli vs Kondapur · 6v6 · Turf Arena</div></span
+              >
+              <span class="harrow">›</span>
+            </div>
 
-        <div class="hopt gl dark pri">
-          <span class="hi2 g">⚡</span>
-          <span><div class="hn">Quick match</div><div class="hd2">Just your squad, kicking off now. Straight to the logger in under a minute.</div></span>
-          <span class="harrow">›</span>
-        </div>
+            <div class="hopt gl">
+              <span class="hi2 l">📝</span>
+              <span
+                ><div class="hn">Log a finished match</div>
+                <div class="hd2">Already played? Enter the result and stats afterwards.</div></span
+              >
+              <span class="harrow">›</span>
+            </div>
 
-        <div class="hopt gl hi">
-          <span class="hi2 l">📅</span>
-          <span><div class="hn">Schedule a match</div><div class="hd2">Pick a date, venue and cost. Others can request to join.</div></span>
-          <span class="harrow">›</span>
-        </div>
+            <div class="sh" style="padding-top: 12px">
+              <span class="sht">What hosting involves</span>
+            </div>
+            <div class="hstep gl hi">
+              <span class="hsn">1</span
+              ><span
+                ><div class="hst">Format &amp; length</div>
+                <div class="hss">6v6, 30 min, 2 halves</div></span
+              >
+            </div>
+            <div class="hstep gl">
+              <span class="hsn">2</span
+              ><span
+                ><div class="hst">Venue &amp; cost per head</div>
+                <div class="hss">Where and what it costs</div></span
+              >
+            </div>
+            <div class="hstep gl">
+              <span class="hsn">3</span
+              ><span
+                ><div class="hst">Add your squad</div>
+                <div class="hss">By mobile number — they don't need the app</div></span
+              >
+            </div>
+            <div class="hstep gl">
+              <span class="hsn">4</span
+              ><span
+                ><div class="hst">Open spots to others</div>
+                <div class="hss">Optional — approve or auto-accept requests</div></span
+              >
+            </div>
 
-        <div class="hopt gl">
-          <span class="hi2 l">🔁</span>
-          <span><div class="hn">Repeat last match</div><div class="hd2">Gachibowli vs Kondapur · 6v6 · Turf Arena</div></span>
-          <span class="harrow">›</span>
-        </div>
-
-        <div class="hopt gl">
-          <span class="hi2 l">📝</span>
-          <span><div class="hn">Log a finished match</div><div class="hd2">Already played? Enter the result and stats afterwards.</div></span>
-          <span class="harrow">›</span>
-        </div>
-
-        <div class="sh" style="padding-top:12px"><span class="sht">What hosting involves</span></div>
-        <div class="hstep gl hi"><span class="hsn">1</span><span><div class="hst">Format &amp; length</div><div class="hss">6v6, 30 min, 2 halves</div></span></div>
-        <div class="hstep gl"><span class="hsn">2</span><span><div class="hst">Venue &amp; cost per head</div><div class="hss">Where and what it costs</div></span></div>
-        <div class="hstep gl"><span class="hsn">3</span><span><div class="hst">Add your squad</div><div class="hss">By mobile number — they don't need the app</div></span></div>
-        <div class="hstep gl"><span class="hsn">4</span><span><div class="hst">Open spots to others</div><div class="hss">Optional — approve or auto-accept requests</div></span></div>
-
-        <div class="hbanner gl">
-          <b>You stay in control</b>
-          As host you approve who joins, set the squads, and hold the logging lock. You can hand logging to someone else any time.
-        </div>
-        <div class="spacer"></div>
-      </div>
-    </div>
-
-    <!-- ===== PROFILE ===== -->
-    <div class="pane" id="pProfile">
-      <div class="body" style="padding-top:14px">
-
-        <div class="phead gl dark">
-          <div class="prr">
-            <span class="pav2">9</span>
-            <span><div class="pn2">Arjun Khanna</div><div class="pd2">Striker · Hyderabad</div></span>
-            <span class="prt"><div class="prv">7.9</div><div class="prl">RATING</div></span>
+            <div class="hbanner gl">
+              <b>You stay in control</b>
+              As host you approve who joins, set the squads, and hold the logging lock. You can hand
+              logging to someone else any time.
+            </div>
+            <div class="spacer"></div>
           </div>
         </div>
 
-        <div class="form gl hi">
-          <span class="fl">🔥 Last 5 matches</span>
-          <span class="fd">
-            <span class="fp w">W</span><span class="fp w">W</span><span class="fp d">D</span>
-            <span class="fp l">L</span><span class="fp w">W</span>
-          </span>
+        <!-- ===== PROFILE ===== -->
+        <div class="pane" id="pProfile">
+          <div class="body" style="padding-top: 14px">
+            <div class="phead gl dark">
+              <div class="prr">
+                <span class="pav2">9</span>
+                <span
+                  ><div class="pn2">Arjun Khanna</div>
+                  <div class="pd2">Striker · Hyderabad</div></span
+                >
+                <span class="prt"
+                  ><div class="prv">7.9</div>
+                  <div class="prl">RATING</div></span
+                >
+              </div>
+            </div>
+
+            <div class="form gl hi">
+              <span class="fl">🔥 Last 5 matches</span>
+              <span class="fd">
+                <span class="fp w">W</span><span class="fp w">W</span><span class="fp d">D</span>
+                <span class="fp l">L</span><span class="fp w">W</span>
+              </span>
+            </div>
+
+            <div class="mrow gl hi" style="margin-top: 11px">
+              <span class="mi">📋</span><span class="mn2">My games</span><span class="mg">›</span>
+            </div>
+            <div class="mrow gl">
+              <span class="mi">📊</span><span class="mn2">Career stats</span
+              ><span class="lock">PRO</span><span class="mg">›</span>
+            </div>
+            <div class="mrow gl">
+              <span class="mi">🃏</span><span class="mn2">My cards</span><span class="mg">›</span>
+            </div>
+            <div class="mrow gl">
+              <span class="mi">👥</span><span class="mn2">Teams &amp; squads</span
+              ><span class="mg">›</span>
+            </div>
+            <div class="mrow gl">
+              <span class="mi">🏟</span><span class="mn2">Matches I host</span
+              ><span class="mg">›</span>
+            </div>
+            <div class="mrow gl">
+              <span class="mi">🔔</span><span class="mn2">Notifications</span
+              ><span class="mg">›</span>
+            </div>
+            <div class="mrow gl">
+              <span class="mi">⚙️</span><span class="mn2">Settings</span><span class="mg">›</span>
+            </div>
+            <div class="mrow gl">
+              <span class="mi">📤</span><span class="mn2">Export my data</span
+              ><span class="mg">›</span>
+            </div>
+            <div class="spacer"></div>
+          </div>
         </div>
 
-        <div class="mrow gl hi" style="margin-top:11px"><span class="mi">📋</span><span class="mn2">My games</span><span class="mg">›</span></div>
-        <div class="mrow gl"><span class="mi">📊</span><span class="mn2">Career stats</span><span class="lock">PRO</span><span class="mg">›</span></div>
-        <div class="mrow gl"><span class="mi">🃏</span><span class="mn2">My cards</span><span class="mg">›</span></div>
-        <div class="mrow gl"><span class="mi">👥</span><span class="mn2">Teams &amp; squads</span><span class="mg">›</span></div>
-        <div class="mrow gl"><span class="mi">🏟</span><span class="mn2">Matches I host</span><span class="mg">›</span></div>
-        <div class="mrow gl"><span class="mi">🔔</span><span class="mn2">Notifications</span><span class="mg">›</span></div>
-        <div class="mrow gl"><span class="mi">⚙️</span><span class="mn2">Settings</span><span class="mg">›</span></div>
-        <div class="mrow gl"><span class="mi">📤</span><span class="mn2">Export my data</span><span class="mg">›</span></div>
-        <div class="spacer"></div>
+        <!-- NAV -->
+        <div class="nav">
+          <span class="navpill" id="navpill"></span>
+          <div class="ni on" data-p="pHome">
+            <span class="nico">🏠</span><span class="nlbl">Home</span>
+          </div>
+          <div class="ni" data-p="pHost">
+            <span class="nico">➕</span><span class="nlbl">Host</span>
+          </div>
+          <div class="ni" data-p="pProfile">
+            <span class="nico">👤</span><span class="nlbl">Profile</span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- NAV -->
-    <div class="nav">
-      <span class="navpill" id="navpill"></span>
-      <div class="ni on" data-p="pHome"><span class="nico">🏠</span><span class="nlbl">Home</span></div>
-      <div class="ni" data-p="pHost"><span class="nico">➕</span><span class="nlbl">Host</span></div>
-      <div class="ni" data-p="pProfile"><span class="nico">👤</span><span class="nlbl">Profile</span></div>
+    <div class="hint">
+      Tap between <b>Home · Host · Profile</b>. Each pane scrolls independently and clears the nav
+      bar.
     </div>
 
-  </div>
-</div>
+    <script>
+      var items = [].slice.call(document.querySelectorAll(".ni"));
+      var pill = document.getElementById("navpill");
+      var panes = ["pHome", "pHost", "pProfile"];
+      function move(el) {
+        var nav = el.parentElement.getBoundingClientRect();
+        var r = el.getBoundingClientRect();
+        pill.style.left = r.left - nav.left + "px";
+        pill.style.width = r.width + "px";
+      }
+      items.forEach(function (it) {
+        it.onclick = function () {
+          items.forEach(function (x) {
+            x.className = "ni";
+          });
+          it.className = "ni on";
+          panes.forEach(function (p) {
+            document.getElementById(p).className = "pane";
+          });
+          document.getElementById(it.dataset.p).className = "pane on";
+          move(it);
+        };
+      });
+      setTimeout(function () {
+        move(items[0]);
+      }, 80);
 
-<div class="hint">Tap between <b>Home · Host · Profile</b>. Each pane scrolls independently and clears the nav bar.</div>
-
-<script>
-var items=[].slice.call(document.querySelectorAll(".ni"));
-var pill=document.getElementById("navpill");
-var panes=["pHome","pHost","pProfile"];
-function move(el){
-  var nav=el.parentElement.getBoundingClientRect();
-  var r=el.getBoundingClientRect();
-  pill.style.left=(r.left-nav.left)+"px";
-  pill.style.width=r.width+"px";
-}
-items.forEach(function(it){
-  it.onclick=function(){
-    items.forEach(function(x){x.className="ni";});
-    it.className="ni on";
-    panes.forEach(function(p){document.getElementById(p).className="pane";});
-    document.getElementById(it.dataset.p).className="pane on";
-    move(it);
-  };
-});
-setTimeout(function(){move(items[0]);},80);
-
-/* ---------- quote of the session ----------
+      /* ---------- quote of the session ----------
    Picked once when the app opens. Stays fixed while the user
    moves between tabs; a new one appears on the next open. */
-var QUOTES=[
-  {t:"Crazy how my life depends upon how I kick a ball"},
-  {t:"Always remember to be grateful to lace up those boots and play the sport you love"},
-  {t:"If you can't outplay them, outwork them"},
-  {t:"Break ankles, not hearts"},
-  {t:"If I have to make a tackle, then I have already made a mistake", a:"Paolo Maldini"},
-  {t:"Football is life, the rest is details"},
-  {t:"Why be normal, when you can be the best", a:"Zlatan Ibrahimović"},
-  {t:"Against the odds, I'd bet on myself", a:"Cristiano Ronaldo"},
-  {t:"Talent without hard work is nothing", a:"Cristiano Ronaldo"}
-];
+      var QUOTES = [
+        { t: "Crazy how my life depends upon how I kick a ball" },
+        { t: "Always remember to be grateful to lace up those boots and play the sport you love" },
+        { t: "If you can't outplay them, outwork them" },
+        { t: "Break ankles, not hearts" },
+        { t: "If I have to make a tackle, then I have already made a mistake", a: "Paolo Maldini" },
+        { t: "Football is life, the rest is details" },
+        { t: "Why be normal, when you can be the best", a: "Zlatan Ibrahimović" },
+        { t: "Against the odds, I'd bet on myself", a: "Cristiano Ronaldo" },
+        { t: "Talent without hard work is nothing", a: "Cristiano Ronaldo" },
+      ];
 
-function pickQuote(){
-  var KEY="fa_quote_i";
-  var i=0;
-  try{
-    var stored=sessionStorage.getItem("fa_quote_session");
-    if(stored!==null){ i=parseInt(stored,10); }
-    else{
-      var last=localStorage.getItem(KEY);
-      i = (last===null) ? 0 : (parseInt(last,10)+1)%QUOTES.length;
-      localStorage.setItem(KEY,i);
-      sessionStorage.setItem("fa_quote_session",i);
-    }
-  }catch(e){ i=0; }
-  var q=QUOTES[i]||QUOTES[0];
-  document.getElementById("qtext").textContent=q.t;
-  document.getElementById("qauth").textContent=q.a?("— "+q.a):"";
-}
-pickQuote();
-</script>
-</body>
+      function pickQuote() {
+        var KEY = "fa_quote_i";
+        var i = 0;
+        try {
+          var stored = sessionStorage.getItem("fa_quote_session");
+          if (stored !== null) {
+            i = parseInt(stored, 10);
+          } else {
+            var last = localStorage.getItem(KEY);
+            i = last === null ? 0 : (parseInt(last, 10) + 1) % QUOTES.length;
+            localStorage.setItem(KEY, i);
+            sessionStorage.setItem("fa_quote_session", i);
+          }
+        } catch (e) {
+          i = 0;
+        }
+        var q = QUOTES[i] || QUOTES[0];
+        document.getElementById("qtext").textContent = q.t;
+        document.getElementById("qauth").textContent = q.a ? "— " + q.a : "";
+      }
+      pickQuote();
+    </script>
+  </body>
 </html>

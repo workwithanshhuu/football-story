@@ -123,7 +123,14 @@ paths:
               required: [email, password, displayName]
               properties:
                 email: { type: string, format: email }
-                password: { type: string, format: password, minLength: 8, maxLength: 72, description: "8–72 UTF-8 bytes; hashed with bcrypt." }
+                password:
+                  {
+                    type: string,
+                    format: password,
+                    minLength: 8,
+                    maxLength: 72,
+                    description: "8–72 UTF-8 bytes; hashed with bcrypt.",
+                  }
                 displayName: { type: string }
       responses:
         "201": { $ref: "#/components/responses/TokenPair" }
@@ -1877,7 +1884,12 @@ paths:
               type: object
               properties:
                 action: { type: string, enum: [pause, resume, next_period, add_stoppage_time] }
-                stoppageSeconds: { type: integer, minimum: 1, description: Required when action=add_stoppage_time. }
+                stoppageSeconds:
+                  {
+                    type: integer,
+                    minimum: 1,
+                    description: Required when action=add_stoppage_time.,
+                  }
       responses:
         "200":
           description: Updated live state
@@ -2389,7 +2401,8 @@ components:
                 type: string
                 description: Opaque, single-use refresh token. Store securely and replace after refresh.
               expiresInSeconds: { type: integer, example: 900, description: Access-token lifetime. }
-              refreshExpiresInSeconds: { type: integer, example: 2592000, description: Refresh-token lifetime. }
+              refreshExpiresInSeconds:
+                { type: integer, example: 2592000, description: Refresh-token lifetime. }
               user: { $ref: "#/components/schemas/User" }
     Unauthorized:
       description: Invalid credentials or expired session
@@ -2495,16 +2508,47 @@ components:
 
     NotificationEventType:
       type: string
-      enum: [join_request_received, join_request_accepted, join_request_declined, match_confirmed, match_rescheduled, match_cancelled, match_reminder_t3h, logger_designated, match_live, scorecard_ready, placeholder_history_found]
+      enum:
+        [
+          join_request_received,
+          join_request_accepted,
+          join_request_declined,
+          match_confirmed,
+          match_rescheduled,
+          match_cancelled,
+          match_reminder_t3h,
+          logger_designated,
+          match_live,
+          scorecard_ready,
+          placeholder_history_found,
+        ]
 
     NotificationDevice:
       type: object
-      required: [id, userId, platform, token, appVersion, locale, timezone, consentGranted, isActive, createdAt, updatedAt]
+      required:
+        [
+          id,
+          userId,
+          platform,
+          token,
+          appVersion,
+          locale,
+          timezone,
+          consentGranted,
+          isActive,
+          createdAt,
+          updatedAt,
+        ]
       properties:
         id: { type: string, format: uuid }
         userId: { type: string, format: uuid }
         platform: { $ref: "#/components/schemas/NotificationPlatform" }
-        token: { type: string, minLength: 1, description: "Provider token; never exposed in logs or public analytics." }
+        token:
+          {
+            type: string,
+            minLength: 1,
+            description: "Provider token; never exposed in logs or public analytics.",
+          }
         appVersion: { type: string, nullable: true }
         locale: { type: string, example: "en-IN" }
         timezone: { type: string, example: "Asia/Kolkata" }
@@ -2560,7 +2604,8 @@ components:
         city: { type: string }
         approvedAddress: { type: [string, "null"] }
         timezone: { type: string }
-        status: { type: string, enum: [draft, open, live, completed, cancelled, abandoned, forfeited] }
+        status:
+          { type: string, enum: [draft, open, live, completed, cancelled, abandoned, forfeited] }
 
     NotificationPayload:
       type: object
@@ -2568,7 +2613,12 @@ components:
       properties:
         category: { $ref: "#/components/schemas/NotificationCategory" }
         preview: { type: string, maxLength: 140 }
-        deepLink: { type: string, pattern: '^app://matches/[^/?#&=]+$', description: "Opaque authenticated app deep link; it contains only a match reference. Exact venue details are resolved after authentication and authorization." }
+        deepLink:
+          {
+            type: string,
+            pattern: "^app://matches/[^/?#&=]+$",
+            description: "Opaque authenticated app deep link; it contains only a match reference. Exact venue details are resolved after authentication and authorization.",
+          }
         venueName: { type: [string, "null"] }
         city: { type: [string, "null"] }
         approvedAddress: { type: [string, "null"] }
@@ -2582,7 +2632,12 @@ components:
         eventType: { $ref: "#/components/schemas/NotificationEventType" }
         occurredAt: { type: string, format: date-time }
         schemaVersion: { type: integer, minimum: 1 }
-        deduplicationKey: { type: string, minLength: 1, description: "Stable producer-side key; replays must not create a second logical notification." }
+        deduplicationKey:
+          {
+            type: string,
+            minLength: 1,
+            description: "Stable producer-side key; replays must not create a second logical notification.",
+          }
         recipientUserIds:
           type: array
           items: { type: string, format: uuid }
@@ -2771,7 +2826,8 @@ components:
 
     PlaceholderMatchClaim:
       type: object
-      required: [matchId, squadMemberId, status, requiresIndividualConfirmation, discoveredAt, syncStatus]
+      required:
+        [matchId, squadMemberId, status, requiresIndividualConfirmation, discoveredAt, syncStatus]
       properties:
         matchId: { type: string, format: uuid }
         squadMemberId: { type: string, format: uuid }
@@ -2832,7 +2888,8 @@ components:
 
     Format:
       type: object
-      required: [id, code, playersPerSide, defaultDurationMinutes, defaultPeriods, defaultFormationId]
+      required:
+        [id, code, playersPerSide, defaultDurationMinutes, defaultPeriods, defaultFormationId]
       properties:
         id: { type: string, format: uuid }
         code: { type: string, example: "6v6" }
@@ -2865,7 +2922,8 @@ components:
       properties:
         orderIndex: { type: integer, minimum: 0 }
         positionId: { type: string, format: uuid }
-        squadMemberId: { type: string, format: uuid, description: "Empty string when isEmpty=true." }
+        squadMemberId:
+          { type: string, format: uuid, description: "Empty string when isEmpty=true." }
         displayName: { type: string, description: "Empty string when isEmpty=true." }
         shirtNumber: { type: integer, minimum: 0, description: "Zero when isEmpty=true." }
         isEmpty: { type: boolean }
@@ -2991,7 +3049,8 @@ components:
         and is never used for a user-initiated transition.
       properties:
         type: { type: string, enum: [user, system] }
-        userId: { type: string, format: uuid, nullable: true, description: "Present when type=user." }
+        userId:
+          { type: string, format: uuid, nullable: true, description: "Present when type=user." }
 
     InternalLiveStatusPush:
       type: object
@@ -3025,7 +3084,12 @@ components:
         fromStatus: { $ref: "#/components/schemas/MatchStatus" }
         toStatus: { $ref: "#/components/schemas/MatchStatus" }
         actor: { $ref: "#/components/schemas/LifecycleActor" }
-        reasonCode: { type: string, nullable: true, description: "An AbandonReason code, or a forfeit reason code, when applicable." }
+        reasonCode:
+          {
+            type: string,
+            nullable: true,
+            description: "An AbandonReason code, or a forfeit reason code, when applicable.",
+          }
         reasonText: { type: string, nullable: true }
         forfeitingSide:
           type: string
@@ -3086,7 +3150,12 @@ components:
           $ref: "#/components/schemas/CoordinateAvailability"
         source: { $ref: "#/components/schemas/LocationSource" }
         precision: { $ref: "#/components/schemas/LocationPrecision" }
-        timezone: { type: string, nullable: true, description: "IANA timezone snapshot in effect for the match venue." }
+        timezone:
+          {
+            type: string,
+            nullable: true,
+            description: "IANA timezone snapshot in effect for the match venue.",
+          }
 
     MatchCreate:
       type: object
@@ -3100,7 +3169,13 @@ components:
       properties:
         formatId: { type: string, format: uuid }
         venueId: { type: string, format: uuid, nullable: true }
-        venueName: { type: string, minLength: 1, maxLength: 120, description: "Required fallback name; replaced by the selected structured venue name when venueId is set." }
+        venueName:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 120,
+            description: "Required fallback name; replaced by the selected structured venue name when venueId is set.",
+          }
         venueSnapshot: { $ref: "#/components/schemas/VenueSnapshot" }
         scheduledAt: { type: string, format: date-time }
         durationMinutes: { type: integer, minimum: 10, maximum: 180 }
@@ -3120,7 +3195,13 @@ components:
         venueName snapshot. Live and completed matches retain their snapshot.
       properties:
         venueId: { type: string, format: uuid, nullable: true }
-        venueName: { type: string, minLength: 1, maxLength: 120, description: "Required when venueId is omitted; ignored in favor of the selected venue name when venueId is set." }
+        venueName:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 120,
+            description: "Required when venueId is omitted; ignored in favor of the selected venue name when venueId is set.",
+          }
         venueSnapshot: { $ref: "#/components/schemas/VenueSnapshot" }
         scheduledAt: { type: string, format: date-time }
         durationMinutes: { type: integer, minimum: 10, maximum: 180 }
@@ -3166,10 +3247,28 @@ components:
       type: object
       required: [phoneNumber]
       properties:
-        phoneNumber: { type: string, description: "Looked up against existing users; if unmatched, a placeholder squad member is created. Required for every squad addition." }
-        displayName: { type: string, description: "Required when phoneNumber does not match an existing user; ignored for an existing user." }
-        shirtNumber: { type: integer, minimum: 1, maximum: 99, description: "Optional; the service assigns the lowest available number from 1 to 99 when omitted." }
-        positionCode: { type: string, description: "Optional; the service assigns the next available position from the format formation when omitted." }
+        phoneNumber:
+          {
+            type: string,
+            description: "Looked up against existing users; if unmatched, a placeholder squad member is created. Required for every squad addition.",
+          }
+        displayName:
+          {
+            type: string,
+            description: "Required when phoneNumber does not match an existing user; ignored for an existing user.",
+          }
+        shirtNumber:
+          {
+            type: integer,
+            minimum: 1,
+            maximum: 99,
+            description: "Optional; the service assigns the lowest available number from 1 to 99 when omitted.",
+          }
+        positionCode:
+          {
+            type: string,
+            description: "Optional; the service assigns the next available position from the format formation when omitted.",
+          }
         isStarting: { type: boolean, default: true }
 
     SquadMemberUpdate:
@@ -3181,7 +3280,8 @@ components:
 
     ClaimedSquadMember:
       type: object
-      required: [matchId, id, matchTeamId, displayName, shirtNumber, positionCode, isStarting, status]
+      required:
+        [matchId, id, matchTeamId, displayName, shirtNumber, positionCode, isStarting, status]
       description: A SquadMember with its matchId included, for the internal claim backfill (MATCH-14).
       properties:
         matchId: { type: string, format: uuid }
@@ -3203,7 +3303,25 @@ components:
         approximate locality; private non-participants never receive exact
         coordinates. Discovery distance is not persisted and does not affect
         eligibility, acceptance, ranking, pricing, or attendance.
-      required: [id, hostUserId, format, venue, durationMinutes, periods, status, currency, paymentType, visibility, autoAcceptJoinRequests, teams, playersJoined, playersNeeded, createdAt, updatedAt]
+      required:
+        [
+          id,
+          hostUserId,
+          format,
+          venue,
+          durationMinutes,
+          periods,
+          status,
+          currency,
+          paymentType,
+          visibility,
+          autoAcceptJoinRequests,
+          teams,
+          playersJoined,
+          playersNeeded,
+          createdAt,
+          updatedAt,
+        ]
       properties:
         id: { type: string, format: uuid }
         hostUserId: { type: string, format: uuid }
@@ -3212,10 +3330,23 @@ components:
           type: object
           required: [venueId, name]
           properties:
-            venueId: { type: string, format: uuid, nullable: true, description: "Nullable structured venue reference; historical match details use name even when this is absent or no longer resolvable." }
+            venueId:
+              {
+                type: string,
+                format: uuid,
+                nullable: true,
+                description: "Nullable structured venue reference; historical match details use name even when this is absent or no longer resolvable.",
+              }
             name: { type: string, description: "Immutable match venue_name snapshot." }
         venueSnapshot: { $ref: "#/components/schemas/VenueSnapshot" }
-        distanceKm: { type: number, format: double, nullable: true, readOnly: true, description: Distance from this request's search position; null for manual search or coordinate-free matches. }
+        distanceKm:
+          {
+            type: number,
+            format: double,
+            nullable: true,
+            readOnly: true,
+            description: Distance from this request's search position; null for manual search or coordinate-free matches.,
+          }
         scheduledAt: { type: string, format: date-time }
         durationMinutes: { type: integer }
         periods: { type: integer }
@@ -3224,8 +3355,14 @@ components:
           type: string
           nullable: true
           description: "Null until the match reaches a terminal state; see MatchResultType (FR-4.9-04, FR-4.9-05)."
-        forfeitingSide: { type: string, nullable: true, description: "Present only when status=forfeited." }
-        endedReason: { type: string, nullable: true, description: "An AbandonReason code, or a forfeit reason code, when status is abandoned or forfeited." }
+        forfeitingSide:
+          { type: string, nullable: true, description: "Present only when status=forfeited." }
+        endedReason:
+          {
+            type: string,
+            nullable: true,
+            description: "An AbandonReason code, or a forfeit reason code, when status is abandoned or forfeited.",
+          }
         endedReasonText: { type: string, nullable: true }
         endedAtPeriod: { type: integer, nullable: true }
         endedAtClockSeconds: { type: integer, nullable: true }
@@ -3317,7 +3454,19 @@ components:
         Operational live projection. At most one active MatchLogger exists for
         a match; concurrent start or replacement attempts return 409. Writes
         are conditional on the current version.
-      required: [matchId, status, scoreHome, scoreAway, currentPeriod, clockSeconds, stoppageSeconds, clockRunning, version, updatedAt]
+      required:
+        [
+          matchId,
+          status,
+          scoreHome,
+          scoreAway,
+          currentPeriod,
+          clockSeconds,
+          stoppageSeconds,
+          clockRunning,
+          version,
+          updatedAt,
+        ]
       properties:
         matchId: { type: string, format: uuid }
         status: { $ref: "#/components/schemas/MatchStatus" }
@@ -3331,7 +3480,8 @@ components:
             Added time recorded for the current period (GAP-10); the clock
             counts up and stoppage is additive, never a rewind.
         clockRunning: { type: boolean }
-        version: { type: integer, format: int64, minimum: 0, description: Monotonic live-state version. }
+        version:
+          { type: integer, format: int64, minimum: 0, description: Monotonic live-state version. }
         activeLogger:
           type: object
           nullable: true
@@ -3346,7 +3496,16 @@ components:
 
     MatchEventCreate:
       type: object
-      required: [id, clientSequence, matchTeamId, squadMemberId, actionTypeCode, periodNumber, matchClockSeconds]
+      required:
+        [
+          id,
+          clientSequence,
+          matchTeamId,
+          squadMemberId,
+          actionTypeCode,
+          periodNumber,
+          matchClockSeconds,
+        ]
       description: >
         id and clientSequence support offline-first capture (ADR 0015): the
         client allocates id (a time-ordered UUIDv7) at the moment of the tap,
@@ -3364,18 +3523,47 @@ components:
           type: string
           format: uuid
           nullable: true
-          description: "\"Against who?\" attribution for contested actions; omit to skip."
+          description: '"Against who?" attribution for contested actions; omit to skip.'
         goalDetail: { $ref: "#/components/schemas/GoalDetail" }
         periodNumber: { type: integer, minimum: 1, maximum: 4 }
         matchClockSeconds: { type: integer, minimum: 0 }
-        duringStoppage: { type: boolean, default: false, description: "GAP-10: set when logged while the clock is paused for stoppage." }
+        duringStoppage:
+          {
+            type: boolean,
+            default: false,
+            description: "GAP-10: set when logged while the clock is paused for stoppage.",
+          }
 
     MatchEvent:
       type: object
-      required: [id, clientSequence, matchId, matchTeamId, squadMemberId, actionTypeCode, periodNumber, matchClockSeconds, loggedByUserId, isUndone, isCorrection, createdAt]
+      required:
+        [
+          id,
+          clientSequence,
+          matchId,
+          matchTeamId,
+          squadMemberId,
+          actionTypeCode,
+          periodNumber,
+          matchClockSeconds,
+          loggedByUserId,
+          isUndone,
+          isCorrection,
+          createdAt,
+        ]
       properties:
-        id: { type: string, format: uuid, description: "Client-allocated, time-ordered UUIDv7 (ADR 0015); doubles as the idempotency key." }
-        clientSequence: { type: integer, minimum: 0, description: "Tie-breaker within (periodNumber, matchClockSeconds) — the ledger ordering key (FR-4.12-03)." }
+        id:
+          {
+            type: string,
+            format: uuid,
+            description: "Client-allocated, time-ordered UUIDv7 (ADR 0015); doubles as the idempotency key.",
+          }
+        clientSequence:
+          {
+            type: integer,
+            minimum: 0,
+            description: "Tie-breaker within (periodNumber, matchClockSeconds) — the ledger ordering key (FR-4.12-03).",
+          }
         matchId: { type: string, format: uuid }
         matchTeamId: { type: string, format: uuid }
         squadMemberId: { type: string, format: uuid }
@@ -3396,7 +3584,16 @@ components:
 
     SubstitutionCreate:
       type: object
-      required: [id, clientSequence, matchTeamId, playerOutSquadMemberId, playerInSquadMemberId, periodNumber, matchClockSeconds]
+      required:
+        [
+          id,
+          clientSequence,
+          matchTeamId,
+          playerOutSquadMemberId,
+          playerInSquadMemberId,
+          periodNumber,
+          matchClockSeconds,
+        ]
       description: >
         id and clientSequence follow the same offline-first rules as
         MatchEventCreate (ADR 0015); the Idempotency-Key header, when also
@@ -3413,9 +3610,27 @@ components:
 
     Substitution:
       type: object
-      required: [id, clientSequence, matchId, matchTeamId, playerOutSquadMemberId, playerInSquadMemberId, periodNumber, matchClockSeconds, loggedByUserId, createdAt, eventVersion]
+      required:
+        [
+          id,
+          clientSequence,
+          matchId,
+          matchTeamId,
+          playerOutSquadMemberId,
+          playerInSquadMemberId,
+          periodNumber,
+          matchClockSeconds,
+          loggedByUserId,
+          createdAt,
+          eventVersion,
+        ]
       properties:
-        id: { type: string, format: uuid, description: "Client-allocated, time-ordered UUIDv7 (ADR 0015)." }
+        id:
+          {
+            type: string,
+            format: uuid,
+            description: "Client-allocated, time-ordered UUIDv7 (ADR 0015).",
+          }
         clientSequence: { type: integer, minimum: 0 }
         matchId: { type: string, format: uuid }
         matchTeamId: { type: string, format: uuid }
@@ -3426,14 +3641,24 @@ components:
         duringStoppage: { type: boolean }
         loggedByUserId: { type: string, format: uuid }
         createdAt: { type: string, format: date-time }
-        eventVersion: { type: integer, minimum: 1, description: "Immutable substitution payload/schema version." }
+        eventVersion:
+          {
+            type: integer,
+            minimum: 1,
+            description: "Immutable substitution payload/schema version.",
+          }
 
     RecoveryBundleCreate:
       type: object
       required: [deviceId, fencedAtVersion, events, substitutions]
       properties:
         deviceId: { type: string }
-        fencedAtVersion: { type: integer, format: int64, description: "The live-state version at which this device was fenced." }
+        fencedAtVersion:
+          {
+            type: integer,
+            format: int64,
+            description: "The live-state version at which this device was fenced.",
+          }
         events:
           type: array
           items: { $ref: "#/components/schemas/MatchEventCreate" }
@@ -3458,7 +3683,19 @@ components:
 
     PlayerMatchStat:
       type: object
-      required: [squadMemberId, userId, displayName, positionCode, goals, assists, yellowCards, redCards, actionTally, opponentAttributedTally]
+      required:
+        [
+          squadMemberId,
+          userId,
+          displayName,
+          positionCode,
+          goals,
+          assists,
+          yellowCards,
+          redCards,
+          actionTally,
+          opponentAttributedTally,
+        ]
       properties:
         squadMemberId: { type: string, format: uuid }
         userId: { type: string, format: uuid, nullable: true }
@@ -3483,7 +3720,19 @@ components:
 
     Scorecard:
       type: object
-      required: [id, matchId, status, resultType, finalScoreHome, finalScoreAway, correctionCount, isCorrected, playerStats, generatedAt]
+      required:
+        [
+          id,
+          matchId,
+          status,
+          resultType,
+          finalScoreHome,
+          finalScoreAway,
+          correctionCount,
+          isCorrected,
+          playerStats,
+          generatedAt,
+        ]
       description: >
         Derived read model for the match. The scorecard is re-projected from the
         append-only ledger and never edited in place. Corrections append a
@@ -3522,7 +3771,8 @@ components:
 
     CorrectionCreate:
       type: object
-      required: [reason, matchTeamId, squadMemberId, actionTypeCode, periodNumber, matchClockSeconds]
+      required:
+        [reason, matchTeamId, squadMemberId, actionTypeCode, periodNumber, matchClockSeconds]
       description: >
         Shaped like MatchEventCreate because a correction is itself an
         append-only compensating ledger event (isCorrection=true); it never
@@ -3577,7 +3827,18 @@ components:
 
     PlayerMatchStats:
       type: object
-      required: [matchId, squadMemberId, positionId, goals, assists, yellowCards, redCards, actionTally, updatedAt]
+      required:
+        [
+          matchId,
+          squadMemberId,
+          positionId,
+          goals,
+          assists,
+          yellowCards,
+          redCards,
+          actionTally,
+          updatedAt,
+        ]
       properties:
         matchId: { type: string, format: uuid }
         squadMemberId: { type: string, format: uuid }

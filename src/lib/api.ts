@@ -1,6 +1,20 @@
-const API_BASE_URL = "https://72f7vsw2ai.execute-api.ap-south-1.amazonaws.com/v1";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "https://72f7vsw2ai.execute-api.ap-south-1.amazonaws.com/v1";
 
 type TokenPair = { accessToken: string; refreshToken: string };
+
+type ApiError = { code?: string; message?: string };
+
+export class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code?: string,
+  ) {
+    super(message);
+    this.name = "ApiRequestError";
+  }
+}
 
 export type User = {
   id: string;
@@ -40,7 +54,18 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     ...init,
     headers: { "content-type": "application/json", ...init.headers },
   });
-  if (!response.ok) throw new Error(`API request failed: ${response.status}`);
+  if (!response.ok) {
+    let message = `API request failed: ${response.status}`;
+    let code: string | undefined;
+    try {
+      const error = (await response.json()) as ApiError;
+      if (error.message) message = error.message;
+      code = error.code;
+    } catch {
+      // Keep the status-based message when the backend does not return JSON.
+    }
+    throw new ApiRequestError(message, response.status, code);
+  }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
@@ -52,10 +77,10 @@ export function loginWithEmail(email: string, password: string) {
   });
 }
 
-export function registerWithEmail(email: string, password: string) {
+export function registerWithEmail(email: string, password: string, displayName: string) {
   return request<TokenPair>("/auth/register-email", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, displayName }),
   });
 }
 
@@ -71,8 +96,10 @@ export function listMatches(accessToken: string) {
   });
 }
 
-export function listFormats() {
-  return request<Format[]>("/formats");
+export function listFormats(accessToken?: string) {
+  return request<Format[]>("/formats", {
+    headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined,
+  });
 }
 
 export function createMatch(accessToken: string, body: Record<string, unknown>) {
