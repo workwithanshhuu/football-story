@@ -5,5 +5,5 @@ export const Route = createFileRoute("/player")({
   head: () => ({
     meta: [{ title: "Live match — footArena" }],
   }),
-  component: () => <LoggerFrame screen="pitch" />,
+  component: LoggerFrame,
 });

@@ -14,7 +14,6 @@ import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as HostRouteImport } from './routes/host'
 import { Route as LoggerRouteImport } from './routes/logger'
-import { Route as MatchLoggerRouteImport } from './routes/match-logger'
 import { Route as MatchesRouteImport } from './routes/matches'
 import { Route as PlayerRouteImport } from './routes/player'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -45,11 +44,6 @@ const LoggerRoute = LoggerRouteImport.update({
   path: '/logger',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MatchLoggerRoute = MatchLoggerRouteImport.update({
-  id: '/match-logger',
-  path: '/match-logger',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const MatchesRoute = MatchesRouteImport.update({
   id: '/matches',
   path: '/matches',
@@ -77,7 +71,6 @@ export interface FileRoutesByFullPath {
   '/home': typeof HomeRoute
   '/host': typeof HostRoute
   '/logger': typeof LoggerRoute
-  '/match-logger': typeof MatchLoggerRoute
   '/matches': typeof MatchesRoute
   '/player': typeof PlayerRoute
   '/profile': typeof ProfileRoute
@@ -89,7 +82,6 @@ export interface FileRoutesByTo {
   '/home': typeof HomeRoute
   '/host': typeof HostRoute
   '/logger': typeof LoggerRoute
-  '/match-logger': typeof MatchLoggerRoute
   '/matches': typeof MatchesRoute
   '/player': typeof PlayerRoute
   '/profile': typeof ProfileRoute
@@ -102,7 +94,6 @@ export interface FileRoutesById {
   '/home': typeof HomeRoute
   '/host': typeof HostRoute
   '/logger': typeof LoggerRoute
-  '/match-logger': typeof MatchLoggerRoute
   '/matches': typeof MatchesRoute
   '/player': typeof PlayerRoute
   '/profile': typeof ProfileRoute
@@ -116,7 +107,6 @@ export interface FileRouteTypes {
     | '/home'
     | '/host'
     | '/logger'
-    | '/match-logger'
     | '/matches'
     | '/player'
     | '/profile'
@@ -128,7 +118,6 @@ export interface FileRouteTypes {
     | '/home'
     | '/host'
     | '/logger'
-    | '/match-logger'
     | '/matches'
     | '/player'
     | '/profile'
@@ -140,7 +129,6 @@ export interface FileRouteTypes {
     | '/home'
     | '/host'
     | '/logger'
-    | '/match-logger'
     | '/matches'
     | '/player'
     | '/profile'
@@ -153,7 +141,6 @@ export interface RootRouteChildren {
   HomeRoute: typeof HomeRoute
   HostRoute: typeof HostRoute
   LoggerRoute: typeof LoggerRoute
-  MatchLoggerRoute: typeof MatchLoggerRoute
   MatchesRoute: typeof MatchesRoute
   PlayerRoute: typeof PlayerRoute
   ProfileRoute: typeof ProfileRoute
@@ -197,13 +184,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoggerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/match-logger': {
-      id: '/match-logger'
-      path: '/match-logger'
-      fullPath: '/match-logger'
-      preLoaderRoute: typeof MatchLoggerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/matches': {
       id: '/matches'
       path: '/matches'
@@ -241,7 +221,6 @@ const rootRouteChildren: RootRouteChildren = {
   HomeRoute: HomeRoute,
   HostRoute: HostRoute,
   LoggerRoute: LoggerRoute,
-  MatchLoggerRoute: MatchLoggerRoute,
   MatchesRoute: MatchesRoute,
   PlayerRoute: PlayerRoute,
   ProfileRoute: ProfileRoute,

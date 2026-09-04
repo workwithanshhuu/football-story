@@ -1,11 +1,16 @@
 # footArena Figma Design Spec
 
+> Supporting visual reference only. Product behavior and scope come from
+> [`requirements.md`](requirements.md); API contracts come from
+> [`openapi.yaml`](openapi.yaml). This document must not introduce requirements
+> or redefine API fields.
+
 Version: 1.0  
 Date: 2026-09-04  
 Product: footArena  
 Audience: player first; host, referee, and scorer are switchable roles
 
-This is the complete visual and interaction specification for the screens currently represented in the repository. It is the source of truth for a Figma file and maps to the implemented routes and logger prototypes.
+This is the visual and interaction specification for the screens currently represented in the repository. It is the reference for Figma and maps to the implemented routes and logger prototypes.
 
 ## Figma File Structure
 

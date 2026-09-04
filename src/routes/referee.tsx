@@ -5,5 +5,5 @@ export const Route = createFileRoute("/referee")({
   head: () => ({
     meta: [{ title: "Referee console — footArena" }],
   }),
-  component: () => <LoggerFrame screen="match" />,
+  component: LoggerFrame,
 });

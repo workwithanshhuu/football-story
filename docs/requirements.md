@@ -667,9 +667,9 @@ require.
 
 ### 16.2 Change control
 
-- This document is the only source of truth (`AGENTS.md`). `docs/openapi.yaml` and
-  `docs/database-design.md` are living references that must be corrected in the same
-  change as the code that revealed the error.
+- This document is the source of truth for product behavior and scope. `docs/openapi.yaml`
+  is the source of truth for the HTTP contract; both must be corrected in the same
+  change as code that reveals a mismatch.
 - Requirement IDs are **append-only** — never renumber, never reuse. Withdrawn
   requirements are struck through and kept.
 - Section numbers 1–11 are frozen; existing ADRs and design docs cite them. Sections
@@ -677,9 +677,7 @@ require.
 - **A decision in Section 19 is reopened only by a new ADR** that states what changed
   in the world. "We changed our mind" is not a reason; "the trigger in Section 11
   fired" is.
-- v2.0 decisions imply contract and schema changes that are **not** applied in this
-  change, because `AGENTS.md` requires `docs/openapi.yaml` and
-  `docs/database-design.md` to move together with the code that implements them.
+- v2.0 decisions imply contract changes that are **not** applied in this change.
   Section 18 lists that work explicitly so the gap is tracked rather than forgotten.
 - Every substantive revision adds a row to the changelog below.
 
@@ -747,16 +745,13 @@ Cross-cutting rules that override the table:
 
 ## 18. Implementation Impact of the v2.0 Decisions
 
-`AGENTS.md` requires `docs/openapi.yaml` and `docs/database-design.md` to change in
-the same commit as the code that implements them. **Update (v2.1):** items 1–6, 8,
-and 9 below have now been applied to `docs/openapi.yaml` and
-`docs/database-design.md`, and to the affected services' `docs/design/*/design.md`
-follow-up sections — contract and schema are done; table-driven tests and the Go
-implementation are still outstanding for every item, per the mandatory order in
-`AGENTS.md`. Item 7 (notifications) still needs its own design doc before any
-contract work, and item 11 remains Phase 1. This section is kept as the backlog
-record of what changed and why; it is not re-written to "contract applied" in
-place so the original decision trail stays intact.
+`AGENTS.md` requires `docs/openapi.yaml` to change in the same commit as code that
+implements a contract change. **Update (v2.1):** items 1–6, 8, and 9 below have
+now been applied to `docs/openapi.yaml`; implementation and focused tests remain
+outstanding for every item. Item 7 (notifications) still needs its own design
+doc before implementation, and item 11 remains Phase 1. This section is kept as
+the backlog record of what changed and why; it is not rewritten so the original
+decision trail stays intact.
 
 | # | Decision | Contract / schema impact | Breaking? | Status (v2.1) |
 |---|---|---|---|---|

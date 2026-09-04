@@ -10,5 +10,5 @@ export const Route = createFileRoute("/logger")({
       },
     ],
   }),
-  component: () => <LoggerFrame screen="pitch" />,
+  component: LoggerFrame,
 });
